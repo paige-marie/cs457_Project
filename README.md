@@ -12,4 +12,4 @@ This is a simple Connect Four game implemented using Python and sockets.
 * Sockets
 
 **Additional resources:**
-* TBD
+* [Connect Four Rules](https://en.wikipedia.org/wiki/Connect_Four)
