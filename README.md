@@ -2,6 +2,10 @@
 
 This is a simple Connect Four game implemented using Python and sockets.
 
+## Setup
+- Requires minimum python 3.10 (due to the use of match control structures)
+- On the CSU CS machines, run `source ./use-venv.sh` to load the appropriate module and create/load the virtual environment.
+
 **How to play:**
 1. **Start the server:** Run the `server.py` script.
 2. **Connect clients:** Run the `client.py` script on two different machines or terminals.
