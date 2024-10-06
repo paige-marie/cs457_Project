@@ -17,3 +17,6 @@ This is a simple Connect Four game implemented using Python and sockets.
 
 **Additional resources:**
 * [Connect Four Rules](https://en.wikipedia.org/wiki/Connect_Four)
+
+**Spring 1 Behavior:**
+Two clients can connect to the server and specify their name once their connection is accepted. The server send back each client their player id.
