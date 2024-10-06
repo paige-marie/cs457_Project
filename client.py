@@ -6,9 +6,17 @@ import protocols
 
 def main():
     try:
-
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((args.server_ip, args.port))
+            sock.settimeout(10)
+            try:
+                sock.connect((args.server_ip, args.port))
+            except socket.timeout:
+                print("Error: Connection to server timed out.")
+                return
+            except socket.error as e::
+                print(f"Error: Socket error occurred - {e}")
+                return
+
             setup(sock)
             while(True):
                 # gameplay goes here
@@ -18,19 +26,30 @@ def main():
     
     except KeyboardInterrupt:
         print("caught keyboard interrupt, exiting")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 
 def setup(sock):
     name = input('Please enter your name: ')
     sock.sendall(protocols.make_json_bytes(protocols.register_with_server(name)))
-    recv_data = sock.recv(10)
-    label, json_length = struct.unpack('>6sI', recv_data)
-    data = sock.recv(json_length)
-    response = protocols.read_json_bytes(data)
+    try:
+        recv_data = sock.recv(10)
+        label, json_length = struct.unpack('>6sI', recv_data)
+        data = sock.recv(json_length)
+        response = protocols.read_json_bytes(data)
+    except: socket.error as e:
+        print(f"Error: Socket error during setup - {e}")
+        return
+    except struct.error as e:
+        print(f"Error: Struct error - {e}")
+        return
+
     if response['proto'] == protocols.Protocols.ERROR:
         print(response['error_message'])
         print('Exiting')
         exit()
+        
     print(response)
     global MY_ID
     MY_ID = response['player_id']
