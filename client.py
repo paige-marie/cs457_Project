@@ -13,7 +13,7 @@ def main():
             except socket.timeout:
                 print("Error: Connection to server timed out.")
                 return
-            except socket.error as e::
+            except socket.error as e:
                 print(f"Error: Socket error occurred - {e}")
                 return
 
@@ -38,7 +38,7 @@ def setup(sock):
         label, json_length = struct.unpack('>6sI', recv_data)
         data = sock.recv(json_length)
         response = protocols.read_json_bytes(data)
-    except: socket.error as e:
+    except socket.error as e:
         print(f"Error: Socket error during setup - {e}")
         return
     except struct.error as e:
