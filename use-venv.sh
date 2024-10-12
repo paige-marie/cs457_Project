@@ -2,10 +2,10 @@
 
 VENV_DIR="venv"
 REQUIREMENTS_FILE="requirements.txt"
-module load python/bundle-3.10
 
 if [ ! -d "$VENV_DIR" ]; then
     echo "venv doesn't exist yet, creating.."
+    module load python/bundle-3.10
     # Create the virtual environment
     python3 -m venv "$VENV_DIR"
     if [ $? -ne 0 ]; then
