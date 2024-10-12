@@ -3,6 +3,8 @@ import struct
 import rsa
 import base64
 
+IS_SERVER = False
+
 class Protocols:
     REGISTER_CLIENT = 0
     REGISTER_CONFIRM = 1
@@ -16,14 +18,15 @@ class Errors:
     PLAYER_COUNT_EXCEEDED = 1
     CUSTOM_ERROR = -1
 
-def send_bytes(message_bytes, sock, other_pubKey, encrypt): #will only be none for the first messages between client and server
+def send_bytes(message_bytes, sock, other_pubKey, encrypt): #will only be none and False for the first messages between client and server
     if encrypt:
-        print('ENCRYPTING')
+        # print('ENCRYPTING')
         message_bytes = rsa.encrypt(message_bytes, other_pubKey)
     length = len(message_bytes)
     encrypt_flag = int(encrypt)
     prefix = struct.pack('>6sI?', b'length', length, encrypt_flag)
     message_bytes = prefix + message_bytes
+
     total_sent = 0
     while total_sent < length:
         try:
@@ -36,21 +39,25 @@ def send_bytes(message_bytes, sock, other_pubKey, encrypt): #will only be none f
 def read_json_bytes(recv_data, sock, my_priKey): #will only be none for the first messages between client and server
     label, json_length, encrypt_flag = struct.unpack('>6sI?', recv_data)
     if label != 'length':
-        pass #TODO raise custom error, this is not a message which follows our protocol
+        pass #TODO handle case where message is not the proto we expect. Maybe send error message and close the connection? Probably need to raise custom exception and do that back in the caller function where server context can be updated
     data = sock.recv(json_length)
     if encrypt_flag:
         data = rsa.decrypt(data, my_priKey)
     message = json.loads(data.decode('utf-8'))
+
     # convert the key from a serialized object back to the type we need
     if message['proto'] == Protocols.REGISTER_CLIENT or message['proto'] == Protocols.REGISTER_CONFIRM:
         message['pub_key'] = rsa.PublicKey.load_pkcs1(base64.b64decode(message['pub_key']), format='PEM')
+
+    if IS_SERVER:
+        print(message)
     return message
         
 
 def make_json_bytes(data):
     json_bytes = json.dumps(data).encode('utf-8')
-    # length_prefix = struct.pack('>6sI', b'length', len(json_bytes))
-    # return length_prefix + json_bytes
+    if IS_SERVER:
+        print(data)
     return json_bytes
 
 def register_with_server(player_name, client_public_key):

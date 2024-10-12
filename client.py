@@ -1,6 +1,5 @@
 import socket
 import argparse
-import struct
 import traceback
 import rsa
 
@@ -35,7 +34,7 @@ def main():
                 recv_data = sock.recv(11)
                 if recv_data:
                     message = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
-                    print(message)
+                    # print(message)
                     if message['proto'] == protocols.Protocols.GAME_OVER:
                         game_over = True
                         break
@@ -65,16 +64,13 @@ def main():
 
 def setup(sock):
     KEYS['pub_key'], KEYS['pri_key'] = rsa.newkeys(512)
-    print(f"my pub key: \n{KEYS['pub_key']}")
+    # print(f"my pub key: \n{KEYS['pub_key']}")
     name = input('Please enter your name: ')
-    # sock.sendall(protocols.make_json_bytes(protocols.register_with_server(name, KEYS['pub_key'])))
     message = protocols.register_with_server(name, KEYS['pub_key'])
     protocols.send_bytes( protocols.make_json_bytes(message), sock, None, False)
     try:
         recv_data = sock.recv(11)
-        # label, json_length = struct.unpack('>6sI', recv_data)
-        # data = sock.recv(json_length)
-        response = protocols.read_json_bytes(recv_data, sock, None)
+        response = protocols.read_json_bytes(recv_data, sock, None) # KEYS['pri_key'])
     except socket.error as e:
         print(f"Error: Socket error during setup - {e}")
         return
@@ -87,7 +83,7 @@ def setup(sock):
         print('Exiting')
         exit()
         
-    print(response)
+    # print(response)
     global MY_ID
     KEYS['server_pub_key'] = response['pub_key']
     MY_ID = response['player_id']
@@ -97,12 +93,11 @@ def setup(sock):
 def get_other_player_info(sock):
     recv_data = sock.recv(11)
     response = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
-    print(response)
+    # print(response)
     other_player = Player(response['other_name'], response['other_id'], False)
     return other_player
 
 def take_my_turn(message, board, players):
-    # assert message['proto'] == protocols.Protocols.YOUR_TURN
     if message['last_move'] != -1:
         col = message['last_move']
         board.place_tile(col, (MY_ID + 1)%2)
@@ -146,8 +141,7 @@ if __name__ == '__main__':
                         required=False,
                         help='Prints the DNS name of the server')
     args = parser.parse_args()
-    # SERVER_IP = args.server_ip
-    # SERVER_PORT = args.port
+    
     main()
 
-# python3 client.py -i harrisburg -p 55667
+# python3 client.py -i harrisburg -p 55668
