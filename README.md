@@ -26,9 +26,12 @@ This is a simple Connect Four game implemented using Python and sockets.
 **Technologies used:**
 * Python
 * Sockets
+* RSA Encryption
 
 **Additional resources:**
 * [Connect Four Rules](https://en.wikipedia.org/wiki/Connect_Four)
+* [Encryption tutorial](https://www.geeksforgeeks.org/how-to-encrypt-and-decrypt-strings-in-python/)
+* [Converting rsa object for json serialization](https://stuvel.eu/python-rsa-doc/reference.html#functions)
 
 ## Sprint 1 Behavior:
 Two clients can connect to the server and specify their name once their connection is accepted. The server sends back each client their player id.

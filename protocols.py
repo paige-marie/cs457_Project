@@ -1,5 +1,7 @@
 import json
 import struct
+import rsa
+import base64
 
 class Protocols:
     REGISTER_CLIENT = 0
@@ -14,8 +16,14 @@ class Errors:
     PLAYER_COUNT_EXCEEDED = 1
     CUSTOM_ERROR = -1
 
-def send_bytes(message_bytes, sock):
+def send_bytes(message_bytes, sock, other_pubKey, encrypt): #will only be none for the first messages between client and server
+    if encrypt:
+        print('ENCRYPTING')
+        message_bytes = rsa.encrypt(message_bytes, other_pubKey)
     length = len(message_bytes)
+    encrypt_flag = int(encrypt)
+    prefix = struct.pack('>6sI?', b'length', length, encrypt_flag)
+    message_bytes = prefix + message_bytes
     total_sent = 0
     while total_sent < length:
         try:
@@ -25,35 +33,46 @@ def send_bytes(message_bytes, sock):
         except BlockingIOError:
             continue
 
-def read_json_bytes(recv_data, sock):
-    label, json_length = struct.unpack('>6sI', recv_data)
+def read_json_bytes(recv_data, sock, my_priKey): #will only be none for the first messages between client and server
+    label, json_length, encrypt_flag = struct.unpack('>6sI?', recv_data)
     if label != 'length':
-        pass
-        #TODO raise custom error, this is not a message which follows our protocol
+        pass #TODO raise custom error, this is not a message which follows our protocol
     data = sock.recv(json_length)
-    return json.loads(data.decode('utf-8'))
+    if encrypt_flag:
+        data = rsa.decrypt(data, my_priKey)
+    message = json.loads(data.decode('utf-8'))
+    # convert the key from a serialized object back to the type we need
+    if message['proto'] == Protocols.REGISTER_CLIENT or message['proto'] == Protocols.REGISTER_CONFIRM:
+        message['pub_key'] = rsa.PublicKey.load_pkcs1(base64.b64decode(message['pub_key']), format='PEM')
+    return message
+        
 
 def make_json_bytes(data):
     json_bytes = json.dumps(data).encode('utf-8')
-    length_prefix = struct.pack('>6sI', b'length', len(json_bytes))
-    return length_prefix + json_bytes
+    # length_prefix = struct.pack('>6sI', b'length', len(json_bytes))
+    # return length_prefix + json_bytes
+    return json_bytes
 
-def register_with_server(player_name):
+def register_with_server(player_name, client_public_key):
     """
     SENT BY CLIENT
     """
+    client_public_key_ser = base64.b64encode(client_public_key.save_pkcs1(format='PEM')).decode('utf-8')
     return {
         'proto' : Protocols.REGISTER_CLIENT,
-        'name' : player_name
+        'name' : player_name,
+        'pub_key' : client_public_key_ser
     }
 
-def confirm_registration(player_id):
+def confirm_registration(player_id, server_public_key):
     """
     SENT BY SERVER
     """
+    server_public_key_ser = base64.b64encode(server_public_key.save_pkcs1(format='PEM')).decode('utf-8')
     return {
         'proto' : Protocols.REGISTER_CONFIRM,
-        'player_id' : player_id
+        'player_id' : player_id,
+        'pub_key' : server_public_key_ser
     }
 
 def other_player(other_name, other_id):

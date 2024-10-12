@@ -3,6 +3,7 @@ import argparse
 import selectors
 import types
 import random
+import rsa
 
 import protocols
 from Player import Player
@@ -43,14 +44,16 @@ def register_a_player(message, key):
     player_id = key.data.player_id
     print(message)
     key.data.player_name = message['name']
-    response = protocols.confirm_registration(player_id)
+    key.data.pub_key = message['pub_key']
+
+    response = protocols.confirm_registration(player_id, SERVER_CONTEXT['pub_key'])
     SERVER_CONTEXT['reg_ct'] += 1
     SERVER_CONTEXT['homeless'].append(key)
     print('sending response')
     print(response)
     repsonse_bytes = protocols.make_json_bytes(response)
     sock = key.fileobj
-    protocols.send_bytes(repsonse_bytes, sock)
+    protocols.send_bytes(repsonse_bytes, sock, None, False)
     if SERVER_CONTEXT['reg_ct'] == 2:
         SERVER_CONTEXT['reg_ct'] = 0
         print('starting game')
@@ -76,12 +79,13 @@ def start_game():
         cur_player = two_players[conn_i]
         message = protocols.other_player(other_player.data.player_name, other_player.data.player_id)
         print(message)
-        protocols.send_bytes(protocols.make_json_bytes(message),cur_player.fileobj)
+        print(cur_player.data.pub_key)
+        protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj, cur_player.data.pub_key, True)
 
     # notify a player that they will begin
     message = protocols.your_turn(-1)
     cur_player = two_players[GAME_CONTEXT['cur_player']]
-    protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj)
+    protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj, cur_player.data.pub_key, True)
 
 def make_players_move(message, key):
     board = GAME_CONTEXT['board']
@@ -94,7 +98,7 @@ def make_players_move(message, key):
         notify_game_over(last_move)
     GAME_CONTEXT['cur_player'] = (GAME_CONTEXT['cur_player'] + 1) % 2
     message = protocols.your_turn(last_move)
-    protocols.send_bytes(protocols.make_json_bytes(message), GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']].fileobj)
+    protocols.send_bytes(protocols.make_json_bytes(message), GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']].fileobj, GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']].data.pub_key, True) #TODO make this readable lol
 
 def notify_game_over(last_move):
     board = GAME_CONTEXT['board']
@@ -102,9 +106,7 @@ def notify_game_over(last_move):
     print(f'WINNER IS {Player.get_player_by_id(board.players, board.winner).name}')
     message = protocols.game_over(board.winner, last_move)
     for key in GAME_CONTEXT['connections']:
-        protocols.send_bytes(protocols.make_json_bytes(message), key.fileobj)
-    
-    # TODO send game over message
+        protocols.send_bytes(protocols.make_json_bytes(message), key.fileobj, key.data.pub_key, True)
 
 def check_sockets():
     try:
@@ -127,12 +129,12 @@ def accept_wrapper(sock):
     if SERVER_CONTEXT['conn_ct'] >= 2:
         #send message to say the game is full
         error_bytes = protocols.make_json_bytes(protocols.error_response(protocols.Errors.PLAYER_COUNT_EXCEEDED))
-        protocols.send_bytes(error_bytes, conn)
+        protocols.send_bytes(error_bytes, conn, None, False)
         conn.close()
         return
     conn.setblocking(False)
     conn.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1) # WHY ARE MY SOCKETS TIMING OUT?
-    data = types.SimpleNamespace(addr=addr, player_id=SERVER_CONTEXT['conn_ct'], player_name="")
+    data = types.SimpleNamespace(addr=addr, player_id=SERVER_CONTEXT['conn_ct'], player_name="", pub_key=None)
     events = selectors.EVENT_READ
     SEL.register(conn, events, data=data)
     SERVER_CONTEXT['conn_ct'] += 1
@@ -142,10 +144,10 @@ def service_connection(key, mask):
     data = key.data
     if mask & selectors.EVENT_READ:
         try:
-            recv_data = sock.recv(10)
+            recv_data = sock.recv(11)
             #TODO check there's actually 10 bytes to be read
             if recv_data:
-                message = protocols.read_json_bytes(recv_data, sock)
+                message = protocols.read_json_bytes(recv_data, sock, SERVER_CONTEXT['pri_key'])
                 print(message)
                 handle_events(message, key)
             else:
@@ -165,7 +167,7 @@ def service_connection(key, mask):
 def set_up_server_socket():
     try:
         ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ss.bind(('0.0.0.0', 55667)) # static port for debugging
+        ss.bind(('0.0.0.0', 55668)) # static port for debugging
         # SERVER_SOCKET.bind(('0.0.0.0', 0)) # any available port 
         ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         ss.listen()
@@ -180,6 +182,7 @@ def set_up_server_socket():
 def handle_args(args):
     set_up_server_socket()
     hostname = socket.gethostname()
+    SERVER_CONTEXT['pub_key'], SERVER_CONTEXT['pri_key'] = rsa.newkeys(512)
     if args.dns:
         print(f'DNS name of server: {hostname}')
     if args.ipaddr:

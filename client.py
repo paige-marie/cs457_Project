@@ -2,11 +2,14 @@ import socket
 import argparse
 import struct
 import traceback
+import rsa
 
 import protocols
 from Player import Player
 from Board import Board
 import auxillary
+
+KEYS = {}
 
 def main():
     game_over = False
@@ -29,9 +32,9 @@ def main():
             players = sorted(players)
             board = Board(players)
             while(True):
-                recv_data = sock.recv(10)
+                recv_data = sock.recv(11)
                 if recv_data:
-                    message = protocols.read_json_bytes(recv_data, sock)
+                    message = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
                     print(message)
                     if message['proto'] == protocols.Protocols.GAME_OVER:
                         game_over = True
@@ -41,7 +44,7 @@ def main():
                         continue
                     my_move = take_my_turn(message, board, players)
                     message = protocols.make_move(my_move)
-                    protocols.send_bytes(protocols.make_json_bytes(message), sock)
+                    protocols.send_bytes(protocols.make_json_bytes(message), sock, KEYS['server_pub_key'], True)
 
                 else:
                     print('Server has disconnected, closing socket')
@@ -58,22 +61,26 @@ def main():
     except Exception as e:
         traceback.print_exc()
         print(f"An unexpected error occurred: {e}")
-   
-        
+
+
 def setup(sock):
+    KEYS['pub_key'], KEYS['pri_key'] = rsa.newkeys(512)
+    print(f"my pub key: \n{KEYS['pub_key']}")
     name = input('Please enter your name: ')
-    sock.sendall(protocols.make_json_bytes(protocols.register_with_server(name)))
+    # sock.sendall(protocols.make_json_bytes(protocols.register_with_server(name, KEYS['pub_key'])))
+    message = protocols.register_with_server(name, KEYS['pub_key'])
+    protocols.send_bytes( protocols.make_json_bytes(message), sock, None, False)
     try:
-        recv_data = sock.recv(10)
+        recv_data = sock.recv(11)
         # label, json_length = struct.unpack('>6sI', recv_data)
         # data = sock.recv(json_length)
-        response = protocols.read_json_bytes(recv_data, sock)
+        response = protocols.read_json_bytes(recv_data, sock, None)
     except socket.error as e:
         print(f"Error: Socket error during setup - {e}")
         return
-    except struct.error as e:
-        print(f"Error: Struct error - {e}")
-        return
+    # except struct.error as e:
+    #     print(f"Error: Struct error - {e}")
+    #     return
 
     if response['proto'] == protocols.Protocols.ERROR:
         print(response['error_message'])
@@ -82,14 +89,14 @@ def setup(sock):
         
     print(response)
     global MY_ID
+    KEYS['server_pub_key'] = response['pub_key']
     MY_ID = response['player_id']
     my_player = Player(name, MY_ID, True)
     return my_player
 
 def get_other_player_info(sock):
-    # data = sock.recv(1024)
-    recv_data = sock.recv(10)
-    response = protocols.read_json_bytes(recv_data, sock)
+    recv_data = sock.recv(11)
+    response = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
     print(response)
     other_player = Player(response['other_name'], response['other_id'], False)
     return other_player
