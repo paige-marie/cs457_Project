@@ -1,0 +1,4 @@
+colorama==0.4.6
+numpy==2.1.2
+pyasn1==0.6.1
+rsa==4.9
