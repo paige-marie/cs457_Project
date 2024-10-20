@@ -41,3 +41,6 @@ This is a simple Connect Four game implemented using Python and sockets.
 
 ## Sprint 1 Behavior:
 Two clients can connect to the server and specify their name once their connection is accepted. The server sends back each client their player id.
+
+## Sprint 2 Message Protocol:
+Every message begins with 11 bytes containing the string "length" with the length of the json followed by an integer length. Next is a boolean byte representing whether or not the JSON is encrypted. Then there is the json message which is defined in the protocols.py file. This file can be found here: https://github.com/paige-marie/cs457_Project/blob/main/protocols.py#L12
