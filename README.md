@@ -28,6 +28,50 @@ This is a simple Connect Four game implemented using Python and sockets.
       - After a player wins, the server closes the connections to the clients.
       - When the connection is closed, the client program will terminate
       - The server remains running and 2 more client players can connect and play. Use `ctrl-C` to stop the server.
+    
+## Message Protocol
+Before every message is are 11 bytes containting the following information: 
+
+`{
+   str: "length",
+   int: <length of json, in bytes>, 
+   boolean: <True when message is encrypted>
+}`
+
+This is followed by the message json contents in bytes. Every message contains a protocol number that defines what type of message is being sent and what information is associated with it. These protocols are defined as follows:
+
+**REGISTER_CLIENT:**
+
+Sent by the client to the server upon initiating the connection. Contains the client's public key and a name for the player. 
+
+**REGISTER_CONFIRM:**
+
+Sent by the server to the client to confirm a clients successful registration. Contains the client's player ID and the servers public key.
+
+**OTHER_PLAYER:**
+
+Sent by the server to the client to convey the other connected players' information. Contains the other players name and ID.
+
+**YOUR_TURN:**
+
+Sent by the server to specify that it is a client's turn. Contains a boolean indicating whether it is the last move.
+
+**MAKE_MOVE:**
+
+Sent by the client to the server to specify the move that they have made. Contains the client's move.
+
+**GAME_OVER:**
+
+Sent by the server to indicate that the game has ended. It contains the winning players ID and the last move resulting in the win.
+
+**ERROR:** 
+
+Sent by the indicating that an error has occured. Contains the error code of the type of error that has occured and the message associated with the error.
+
+
+
+
+
 
 **Technologies used:**
 * Python
@@ -41,6 +85,3 @@ This is a simple Connect Four game implemented using Python and sockets.
 
 ## Sprint 1 Behavior:
 Two clients can connect to the server and specify their name once their connection is accepted. The server sends back each client their player id.
-
-## Sprint 2 Message Protocol:
-Every message begins with 11 bytes containing the string "length" with the length of the json followed by an integer length. Next is a boolean byte representing whether or not the JSON is encrypted. Then there is the json message which is defined in the protocols.py file. This file can be found here: https://github.com/paige-marie/cs457_Project/blob/main/protocols.py#L12
