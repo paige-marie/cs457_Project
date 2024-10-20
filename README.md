@@ -73,12 +73,12 @@ Sent by the indicating that an error has occured. Contains the error code of the
 
 
 
-**Technologies used:**
+## Technologies used:
 * Python
 * Sockets
 * RSA Encryption
 
-**Additional resources:**
+## Additional resources
 * [Connect Four Rules](https://en.wikipedia.org/wiki/Connect_Four)
 * [Encryption tutorial](https://www.geeksforgeeks.org/how-to-encrypt-and-decrypt-strings-in-python/)
 * [Converting rsa object for json serialization](https://stuvel.eu/python-rsa-doc/reference.html#functions)
