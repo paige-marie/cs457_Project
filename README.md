@@ -30,7 +30,7 @@ This is a simple Connect Four game implemented using Python and sockets.
       - The server remains running and 2 more client players can connect and play. Use `ctrl-C` to stop the server.
     
 ## Message Protocol
-Before every message is are 11 bytes containting the following information: 
+Before every message are 11 bytes containting the following information: 
 
 `{
    str: "length",
@@ -54,7 +54,7 @@ Sent by the server to the client to convey the other connected players' informat
 
 **YOUR_TURN:**
 
-Sent by the server to specify that it is a client's turn. Contains a boolean indicating whether it is the last move.
+Sent by the server to specify that it is a client's turn. Contains the last move made by the other player. When it is the first move of the game, it sends -1.
 
 **MAKE_MOVE:**
 
