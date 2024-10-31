@@ -51,6 +51,12 @@ def main():
                     break
             
             if game_over:
+                # if I am not the winner, reprint the board with the winning move
+                if Player.get_player_by_id(players, message['winner']).id != MY_ID:
+                    col = message['last_move']
+                    board.place_tile(col, (MY_ID + 1)%2)
+                    auxillary.clear_terminal()
+                    print(board)
                 print(f"The winner is {Player.get_player_by_id(players, message['winner']).name}!")
             else:
                 print(f"The game was terminated early.")
