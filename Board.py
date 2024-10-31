@@ -35,10 +35,10 @@ class Board:
         vertical = self.check_straight(self.board_arr.T)
         positive = self.check_diagonal(self.board_arr)
         negative = self.check_diagonal(np.flip(self.board_arr, 0))
-        print(f'horozontal win = {horozontal}')
-        print(f'vertical win = {vertical}')
-        print(f'positive win = {positive}')
-        print(f'negative win = {negative}')
+        # print(f'horozontal win = {horozontal}')
+        # print(f'vertical win = {vertical}')
+        # print(f'positive win = {positive}')
+        # print(f'negative win = {negative}')
         return horozontal or vertical or positive or negative
     
     def check_straight(self, b):

@@ -21,13 +21,10 @@ class Errors:
 
 def print_and_log(log_str):
     """ONLY CALLED BY SERVER, print to terminal and to a log file"""
-    # TODO differenciate between messages sent and received
-    # TODO add player id in each protocol so log makes more sense
     with open(SERVER_LOG_PATH, 'a') as file:
         if isinstance(log_str, dict):
             # file.write('Message received:\n')
             for key, value in log_str.items():
-                print(type(value))
                 if key == 'pub_key':
                     value = 'REDACTED'
                 file.write(f"\t{key}: {value}\n")

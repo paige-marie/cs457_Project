@@ -62,7 +62,6 @@ def register_a_player(message, key):
 
     if SERVER_CONTEXT['reg_ct'] == 2:
         SERVER_CONTEXT['reg_ct'] = 0
-        # print('starting game')
         protocols.print_and_log('Starting Game')
         start_game()
 
@@ -83,12 +82,9 @@ def start_game():
     # notify a player that they will begin
     message = protocols.your_turn(-1)
     cur_player = GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]
-    # print(f"start game: cur player: {GAME_CONTEXT['cur_player']}")
-    # print(f"start game: {cur_player.data.player_id}")
     protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj, cur_player.data.pub_key, True)
 
 def notify_other_player():
-    # print('send other player data')
     protocols.print_and_log('Sending other player data')
     for conn_i in range(len(GAME_CONTEXT['connections'])):
         other_player = GAME_CONTEXT['connections'][(conn_i + 1) % 2]
@@ -98,17 +94,13 @@ def notify_other_player():
 
 def make_players_move(message, key):
     board = GAME_CONTEXT['board']
-    # print(f"correct player: {key.data.player_id == GAME_CONTEXT['cur_player']}")
-    # protocols.print_and_log(f"correct player?: {key.data.player_id == GAME_CONTEXT['cur_player']}")
-    # print(f"{key.data.player_id} == {GAME_CONTEXT['cur_player']}")
     last_move = message['move']
     board.place_tile(last_move, key.data.player_id)
 
-    # print(board)
-    # print('Checking for game over')
     print(board) # prints with colored circles
     with open(protocols.SERVER_LOG_PATH, 'a') as file:
         file.write(board.draw_board_for_log()) #print in log with player id
+
     protocols.print_and_log('Checking for game over')
     if board.game_over():
         notify_game_over(last_move)
@@ -176,7 +168,7 @@ def close_bad_connection(addr, sock):
     SEL.unregister(sock)
     sock.close()
     SERVER_CONTEXT['conn_ct'] -= 1
-    protocols.print_and_log(f"{SERVER_CONTEXT['conn_ct']=}")
+    protocols.print_and_log(f"Current number of connections: {SERVER_CONTEXT['conn_ct']}")
 
 def set_up_server_socket():
     try:
