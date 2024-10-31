@@ -76,6 +76,19 @@ class Board:
             ) + ' |\n'
         return board_str
     
+    def draw_board_for_log(self):
+        human_board = np.flip(self.board_arr, 0)
+        board_str = "\n"
+        board_str += '  ' + "   ".join(str(n) for n in range(NUM_COLS)) + ' \n\n'
+        for row in human_board:
+            board_str += '| ' + " | ".join(
+                str(self.players[0].id) if c == self.players[0].id else
+                str(self.players[1].id) if c == self.players[1].id else
+                ' ' if c == -1 else str(c) 
+                for c in row
+            ) + ' |\n'
+        return board_str
+    
     def draw_in_pygame(self, human_board):
         pass
 

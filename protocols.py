@@ -4,6 +4,7 @@ import rsa
 import base64
 
 IS_SERVER = False
+SERVER_LOG_PATH = 'server-log.log'
 
 class Protocols:
     REGISTER_CLIENT = 0
@@ -17,6 +18,22 @@ class Protocols:
 class Errors:
     PLAYER_COUNT_EXCEEDED = 1
     CUSTOM_ERROR = -1
+
+def print_and_log(log_str):
+    """ONLY CALLED BY SERVER, print to terminal and to a log file"""
+    # TODO differenciate between messages sent and received
+    # TODO add player id in each protocol so log makes more sense
+    with open(SERVER_LOG_PATH, 'a') as file:
+        if isinstance(log_str, dict):
+            # file.write('Message received:\n')
+            for key, value in log_str.items():
+                print(type(value))
+                if key == 'pub_key':
+                    value = 'REDACTED'
+                file.write(f"\t{key}: {value}\n")
+        else:
+            file.write(log_str + '\n')
+    print(log_str)
 
 def send_bytes(message_bytes, sock, other_pubKey, encrypt): #will only be none and False for the first messages between client and server
     if encrypt:
@@ -50,14 +67,18 @@ def read_json_bytes(recv_data, sock, my_priKey): #will only be none for the firs
         message['pub_key'] = rsa.PublicKey.load_pkcs1(base64.b64decode(message['pub_key']), format='PEM')
 
     if IS_SERVER:
-        print(message)
+        with open(SERVER_LOG_PATH, 'a') as file:
+            file.write('Message received:\n')
+        print_and_log(message)
     return message
         
 
 def make_json_bytes(data):
     json_bytes = json.dumps(data).encode('utf-8')
     if IS_SERVER:
-        print(data)
+        with open(SERVER_LOG_PATH, 'a') as file:
+            file.write('Message sent:\n')
+        print_and_log(data)
     return json_bytes
 
 def register_with_server(player_name, client_public_key):
