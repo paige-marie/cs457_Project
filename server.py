@@ -20,12 +20,13 @@ SERVER_CONTEXT = {
 }
 
 GAME_CONTEXT = {
-    'cur_player' : 0,
-    'connections' : [],
-    'board' : None
+    'cur_player' : 0, # the index (in connections) of the player whom the server is waiting for a move from
+    'connections' : [], # a list of the selector keys associated with client sockets
+    'board' : None # the board, which represents the gameplay state
 }
 
 def main():
+    """THE MAIN EVENT"""
     try:
         check_sockets()
     except KeyboardInterrupt:
@@ -41,6 +42,7 @@ def main():
         SEL.close()
 
 def handle_events(message, key):
+    """based on the proto number, route incoming client messages to the correct handling"""
     message_type = message['proto']
     match message_type:
         case protocols.Protocols.REGISTER_CLIENT:
@@ -49,6 +51,7 @@ def handle_events(message, key):
             make_players_move(message, key)
 
 def register_a_player(message, key):
+    """register a player with the server as waiting for a game, including associating their socket to their public key for decryption"""
     player_id = key.data.player_id
     key.data.player_name = message['name']
     key.data.pub_key = message['pub_key']
@@ -66,6 +69,7 @@ def register_a_player(message, key):
         start_game()
 
 def start_game():
+    """update game context for server and players, randomly select the first player and allow request the first move"""
     GAME_CONTEXT['connections'] = SERVER_CONTEXT['homeless'][:2]
     SERVER_CONTEXT['homeless'] = SERVER_CONTEXT['homeless'][2:]
     players = []
@@ -82,9 +86,11 @@ def start_game():
     # notify a player that they will begin
     message = protocols.your_turn(-1)
     cur_player = GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]
+    protocols.print_and_log(f"First player is {cur_player.data.player_name}, player id {cur_player.data.player_id}")
     protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj, cur_player.data.pub_key, True)
 
 def notify_other_player():
+    """Send both players the information they need about their opponent"""
     protocols.print_and_log('Sending other player data')
     for conn_i in range(len(GAME_CONTEXT['connections'])):
         other_player = GAME_CONTEXT['connections'][(conn_i + 1) % 2]
@@ -93,6 +99,10 @@ def notify_other_player():
         protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj, cur_player.data.pub_key, True)
 
 def make_players_move(message, key):
+    cur_player_key = GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]
+    # print(f"start game: cur player: {GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]}")
+    print(f"The player whose turn it is making a move?: {cur_player_key.data.player_id} == {key.data.player_id} ? : {cur_player_key.data.player_id == key.data.player_id}")
+
     board = GAME_CONTEXT['board']
     last_move = message['move']
     board.place_tile(last_move, key.data.player_id)
