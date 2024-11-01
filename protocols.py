@@ -21,13 +21,17 @@ class Errors:
 
 def print_and_log(log_str):
     """ONLY CALLED BY SERVER, print to terminal and to a log file"""
+    # if isinstance(log_str, dict):
+    #     log_str = log_str.copy()
     with open(SERVER_LOG_PATH, 'a') as file:
         if isinstance(log_str, dict):
+            # if log_str['proto'] in [0,1]:
+            log_str = log_str.copy()
             # file.write('Message received:\n')
             for key, value in log_str.items():
                 if key == 'pub_key':
-                    value = 'REDACTED'
-                file.write(f"\t{key}: {value}\n")
+                    log_str[key] = 'REDACTED'
+                file.write(f"\t{key}: {log_str[key]}\n")
         else:
             file.write(log_str + '\n')
     print(log_str)
