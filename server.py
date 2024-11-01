@@ -168,13 +168,20 @@ def service_connection(key, mask):
                 message = protocols.read_json_bytes(recv_data, sock, SERVER_CONTEXT['pri_key'])
                 handle_events(message, key)
             else:
-                close_bad_connection(data.addr, sock)
+                close_bad_connection(key, data.addr, sock)
                 # SERVER_CONTEXT['reg_ct'] -= 1 # need a way to detect if a closed connection was a registered player (or assume players will never disconnect randomly)
         except ConnectionResetError:
-            close_bad_connection(data.addr, sock)
+            close_bad_connection(key, data.addr, sock)
 
-def close_bad_connection(addr, sock):
+def close_bad_connection(key, addr, sock):
+    """update server and game state and close server side socket when a player disconnects"""
     protocols.print_and_log(f"Closing connection to {addr}")
+    if key in GAME_CONTEXT['connections']:
+        # TODO make the remaining player in the game the winner and end the game
+        GAME_CONTEXT['connections'].remove(key)
+    if key in SERVER_CONTEXT['homeless']:
+        SERVER_CONTEXT['homeless'].remove(key)
+        SERVER_CONTEXT['reg_ct'] -= 1
     SEL.unregister(sock)
     sock.close()
     SERVER_CONTEXT['conn_ct'] -= 1
@@ -212,6 +219,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Server for 'Connect 4' game")
     parser.add_argument('-i', '--ipaddr', action='store_true', help='Prints the IPv4 address of the server')
     parser.add_argument('-p', '--port', action='store_true', help='Prints the port number the server is listening at')
+    # TODO change -p arg to take a port number and use that when creating server socket
     parser.add_argument('-d', '--dns', action='store_true', help='Prints the DNS name of the server')
     args = parser.parse_args()
     handle_args(args)

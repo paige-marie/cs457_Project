@@ -143,6 +143,7 @@ if __name__ == '__main__':
                         required=True,
                         type=int,
                         help='The port number the server is listening at')
+    # TODO dns can be used to create socket, simply set args.ip to this and it will work the same
     parser.add_argument('-n', '--dns',
                         action='store_true',
                         # metavar='DNS of Server', 

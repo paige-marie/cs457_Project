@@ -15,6 +15,16 @@ class Protocols:
     GAME_OVER = 7
     ERROR = -1
 
+    PROTO_NAMES = {
+        0: "REGISTER_CLIENT",
+        1: "REGISTER_CONFIRM",
+        8: "OTHER_PLAYER",
+        5: "YOUR_TURN",
+        6: "MAKE_MOVE",
+        7: "GAME_OVER",
+        -1: "ERROR"
+    }
+
 class Errors:
     PLAYER_COUNT_EXCEEDED = 1
     CUSTOM_ERROR = -1
@@ -32,6 +42,8 @@ def print_and_log(log_str):
                 if key == 'pub_key':
                     log_str[key] = 'REDACTED'
                 file.write(f"\t{key}: {log_str[key]}\n")
+                if key == 'proto':
+                    file.write(f"\tmessag_type: {Protocols.PROTO_NAMES[value]}\n")
         else:
             file.write(log_str + '\n')
     print(log_str)
