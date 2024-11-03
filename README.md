@@ -11,13 +11,13 @@ This is a simple Connect Four game implemented using Python and sockets.
 1. **Start the server:** Run the `server.py` script.
    - Arguments:
        - `-i` to print the IPv4 address of the server
-       - `-p` to print the port number the server is listening on
+       - `-p` to specify the port number the server is listening on. If ommited, a default port is  used
        - `-h` will print a help dialog
        - `-d` will print the DNS name of the server
        - Exmaple: `python3 server.py -i -p`
 3. **Connect clients:** Run the `client.py` script on two different machines or terminals.
    - Arguments:
-       - `-i` to specify the IP address of the server
+       - `-i` to specify the IP address or hostname of the server
        - `-p` to specify the port number the server is listening on
        - `-h` will print general rules of the game and a help dialog
        - Exmaple: `python3 client.py -i 129.82.44.166 -p 55667` or `python3 client.py -i richmond.cs.colostate.edu -p 55667`
