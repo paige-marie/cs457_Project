@@ -4,6 +4,7 @@ import rsa
 import base64
 
 IS_SERVER = False
+SERVER_LOG_PATH = 'server-log.log'
 
 class Protocols:
     REGISTER_CLIENT = 0
@@ -14,9 +15,38 @@ class Protocols:
     GAME_OVER = 7
     ERROR = -1
 
+    PROTO_NAMES = {
+        0: "REGISTER_CLIENT",
+        1: "REGISTER_CONFIRM",
+        8: "OTHER_PLAYER",
+        5: "YOUR_TURN",
+        6: "MAKE_MOVE",
+        7: "GAME_OVER",
+        -1: "ERROR"
+    }
+
 class Errors:
     PLAYER_COUNT_EXCEEDED = 1
     CUSTOM_ERROR = -1
+
+def print_and_log(log_str):
+    """ONLY CALLED BY SERVER, print to terminal and to a log file"""
+    # if isinstance(log_str, dict):
+    #     log_str = log_str.copy()
+    with open(SERVER_LOG_PATH, 'a') as file:
+        if isinstance(log_str, dict):
+            # if log_str['proto'] in [0,1]:
+            log_str = log_str.copy()
+            # file.write('Message received:\n')
+            for key, value in log_str.items():
+                if key == 'pub_key':
+                    log_str[key] = 'REDACTED'
+                file.write(f"\t{key}: {log_str[key]}\n")
+                if key == 'proto':
+                    file.write(f"\tmessag_type: {Protocols.PROTO_NAMES[value]}\n")
+        else:
+            file.write(log_str + '\n')
+    print(log_str)
 
 def send_bytes(message_bytes, sock, other_pubKey, encrypt): #will only be none and False for the first messages between client and server
     if encrypt:
@@ -50,14 +80,18 @@ def read_json_bytes(recv_data, sock, my_priKey): #will only be none for the firs
         message['pub_key'] = rsa.PublicKey.load_pkcs1(base64.b64decode(message['pub_key']), format='PEM')
 
     if IS_SERVER:
-        print(message)
+        with open(SERVER_LOG_PATH, 'a') as file:
+            file.write('Message received:\n')
+        print_and_log(message)
     return message
         
 
 def make_json_bytes(data):
     json_bytes = json.dumps(data).encode('utf-8')
     if IS_SERVER:
-        print(data)
+        with open(SERVER_LOG_PATH, 'a') as file:
+            file.write('Message sent:\n')
+        print_and_log(data)
     return json_bytes
 
 def register_with_server(player_name, client_public_key):

@@ -51,7 +51,15 @@ def main():
                     break
             
             if game_over:
-                print(f"The winner is {Player.get_player_by_id(players, message['winner']).name}!")
+                # auxillary.color_text(players[MY_ID], players[MY_ID].name)
+                # if I am not the winner, reprint the board with the winning move
+                winning_player = Player.get_player_by_id(players, message['winner'])
+                if winning_player.id != MY_ID:
+                    col = message['last_move']
+                    board.place_tile(col, (MY_ID + 1)%2)
+                    auxillary.clear_terminal()
+                    print(board)
+                print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
             else:
                 print(f"The game was terminated early.")
     
@@ -135,6 +143,7 @@ if __name__ == '__main__':
                         required=True,
                         type=int,
                         help='The port number the server is listening at')
+    # TODO dns can be used to create socket, simply set args.ip to this and it will work the same
     parser.add_argument('-n', '--dns',
                         action='store_true',
                         # metavar='DNS of Server', 
