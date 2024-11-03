@@ -17,6 +17,9 @@ def main():
             # sock.settimeout(10)
             try:
                 sock.connect((args.server_ip, args.port))
+                if args.dns:
+                    resolved_ip = socket.gethostbyname(args.server_ip)
+                    print(f"Connected to server at {resolved_ip} ({args.server_ip})")
             except ConnectionRefusedError:
                 print("Error: Unable to connect to server. Check the address and port and try again.\nExiting")
                 return
@@ -137,7 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--server_ip',
                          metavar='<Server IP Address>', 
                          required=True, 
-                         help='The IP address the server is running at')
+                         help='The IP address or hostname the server is running at')
     parser.add_argument('-p', '--port',
                         metavar='<Server Port Number>', 
                         required=True,

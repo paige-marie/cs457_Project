@@ -25,6 +25,8 @@ GAME_CONTEXT = {
     'board' : None # the board, which represents the gameplay state
 }
 
+DEFAULT_PORT = 55668
+
 def main():
     """THE MAIN EVENT"""
     try:
@@ -187,10 +189,10 @@ def close_bad_connection(key, addr, sock):
     SERVER_CONTEXT['conn_ct'] -= 1
     protocols.print_and_log(f"Current number of connections: {SERVER_CONTEXT['conn_ct']}")
 
-def set_up_server_socket():
+def set_up_server_socket(port):
     try:
         ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ss.bind(('0.0.0.0', 55668)) # static port for debugging
+        ss.bind(('0.0.0.0', port)) # static port for debugging
         # SERVER_SOCKET.bind(('0.0.0.0', 0)) # any available port 
         ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         ss.listen()
@@ -203,7 +205,10 @@ def set_up_server_socket():
         exit()
 
 def handle_args(args):
-    set_up_server_socket()
+    port = DEFAULT_PORT
+    if args.port is not None:
+        port = args.port
+    set_up_server_socket(port)
     protocols.print_and_log('STARTING SERVER')
     hostname = socket.gethostname()
     SERVER_CONTEXT['pub_key'], SERVER_CONTEXT['pri_key'] = rsa.newkeys(512)
@@ -218,8 +223,7 @@ def handle_args(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Server for 'Connect 4' game")
     parser.add_argument('-i', '--ipaddr', action='store_true', help='Prints the IPv4 address of the server')
-    parser.add_argument('-p', '--port', action='store_true', help='Prints the port number the server is listening at')
-    # TODO change -p arg to take a port number and use that when creating server socket
+    parser.add_argument('-p', '--port', type=int, help='Port number for the server to listen on')
     parser.add_argument('-d', '--dns', action='store_true', help='Prints the DNS name of the server')
     args = parser.parse_args()
     handle_args(args)
