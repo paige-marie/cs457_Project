@@ -69,9 +69,19 @@ Sent by the server to indicate that the game has ended. It contains the winning 
 Sent by the indicating that an error has occured. Contains the error code of the type of error that has occured and the message associated with the error.
 
 
+## State Management
+The server maintains state for both the connections to it and the currently running game.
 
+**Server State:**
+* The connections that are not currently involved in a game
+* The number of connections that have completed registration and are ready to be added to a game. When this is 2, the game starts.
 
-
+**Game State:**
+* The connections of the players playing the game
+* Whose turn it currently is
+* The state of the board.
+ 
+The server makes the player’s moves on the board, updating the board state and checking if the moving is a winning one. If it is, the players are notified, their connections are closed, and the server returns to a waiting-for-players state. If not, the server communicates the move to the other player so they can make their move.
 
 ## Technologies used:
 * Python
