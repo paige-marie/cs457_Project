@@ -101,10 +101,12 @@ def notify_other_player():
         protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj, cur_player.data.pub_key, True)
 
 def make_players_move(message, key):
+    if len(GAME_CONTEXT['connections']) != 2:
+        return # message was sent after the other player disconnected while live client was waiting for user input
+        
     cur_player_key = GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]
     # print(f"start game: cur player: {GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]}")
     print(f"The player whose turn it is making a move?: {cur_player_key.data.player_id} == {key.data.player_id} ? : {cur_player_key.data.player_id == key.data.player_id}")
-
     board = GAME_CONTEXT['board']
     last_move = message['move']
     board.place_tile(last_move, key.data.player_id)
@@ -115,7 +117,7 @@ def make_players_move(message, key):
 
     protocols.print_and_log('Checking for game over')
     if board.game_over():
-        notify_game_over(last_move)
+        game_over(last_move)
     GAME_CONTEXT['cur_player'] = (GAME_CONTEXT['cur_player'] + 1) % 2
 
     message = protocols.your_turn(last_move)
@@ -123,7 +125,7 @@ def make_players_move(message, key):
     player_public_key = GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']].data.pub_key
     protocols.send_bytes(protocols.make_json_bytes(message), next_player_socket, player_public_key, True)
 
-def notify_game_over(last_move):
+def game_over(last_move):
     board = GAME_CONTEXT['board']
     protocols.print_and_log('game over')
     protocols.print_and_log(f'WINNER IS {Player.get_player_by_id(board.players, board.winner).name}, player id: {Player.get_player_by_id(board.players, board.winner).id}')
@@ -180,7 +182,16 @@ def close_bad_connection(key, addr, sock):
     protocols.print_and_log(f"Closing connection to {addr}")
     if key in GAME_CONTEXT['connections']:
         # TODO make the remaining player in the game the winner and end the game
+        #remove the connection from game connections
         GAME_CONTEXT['connections'].remove(key)
+        # manually set the winner to the remaining player
+        board = GAME_CONTEXT['board']
+        if len(GAME_CONTEXT['connections']) > 0:
+            other_key = GAME_CONTEXT['connections'][0]
+            protocols.print_and_log(f'Player {key.data.player_name} disconnected; Game forfeited to {other_key.data.player_name}')
+            board.winner = other_key.data.player_id
+            message = protocols.game_over(board.winner, -2)
+            protocols.send_bytes(protocols.make_json_bytes(message), other_key.fileobj, other_key.data.pub_key, True)
     if key in SERVER_CONTEXT['homeless']:
         SERVER_CONTEXT['homeless'].remove(key)
         SERVER_CONTEXT['reg_ct'] -= 1
@@ -188,6 +199,7 @@ def close_bad_connection(key, addr, sock):
     sock.close()
     SERVER_CONTEXT['conn_ct'] -= 1
     protocols.print_and_log(f"Current number of connections: {SERVER_CONTEXT['conn_ct']}")
+
 
 def set_up_server_socket():
     port = DEFAULT_PORT
