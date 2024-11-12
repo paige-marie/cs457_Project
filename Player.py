@@ -16,6 +16,7 @@ class Player:
 
     @staticmethod
     def get_color(playr):
+        # TODO decouple from the player id, maybe move this function into the board class and determine it by position in list?
         return ('red', aux.RED) if playr.id % 2 == 1 else ('blue', aux.BLUE)
     
     @staticmethod

@@ -115,8 +115,9 @@ def make_players_move(message, key):
     with open(protocols.SERVER_LOG_PATH, 'a') as file:
         file.write(board.draw_board_for_log()) #print in log with player id
 
-    protocols.print_and_log('Checking for game over')
-    if board.game_over():
+    over = board.game_over()
+    protocols.print_and_log(f'Checking for game over: {over}')
+    if over:
         game_over(last_move)
     GAME_CONTEXT['cur_player'] = (GAME_CONTEXT['cur_player'] + 1) % 2
 
