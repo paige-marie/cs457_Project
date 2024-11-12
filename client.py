@@ -57,17 +57,20 @@ def main():
                     continue
             
             if game_over:
-                # auxillary.color_text(players[MY_ID], players[MY_ID].name)
                 # if I am not the winner, reprint the board with the winning move
-                winning_player = Player.get_player_by_id(players, message['winner'])
                 if message['last_move'] == -2:
                     print(f"{auxillary.color_text(other_player, other_player.name)} has forfeited.")
-                if winning_player.id != MY_ID:
+                if message['winner'] != MY_ID:
                     col = message['last_move']
                     board.place_tile(col, (MY_ID + 1)%2)
                     auxillary.clear_terminal()
                     print(board)
-                print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
+                # TODO if the winner is -1, then the game was a draw
+                if message['winner'] == -1:
+                    print("There are no more valid moves; the game is a draw")
+                else:
+                    winning_player = Player.get_player_by_id(players, message['winner'])
+                    print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
             else: # pretty much only caused by unexpected message from server
                 print(f"The game was terminated early.")
     

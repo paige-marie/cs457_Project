@@ -129,7 +129,10 @@ def make_players_move(message, key):
 def game_over(last_move):
     board = GAME_CONTEXT['board']
     protocols.print_and_log('game over')
-    protocols.print_and_log(f'WINNER IS {Player.get_player_by_id(board.players, board.winner).name}, player id: {Player.get_player_by_id(board.players, board.winner).id}')
+    if board.winner == Board.FILL_VALUE:
+        protocols.print_and_log("The game is a draw")
+    else:
+        protocols.print_and_log(f'WINNER IS {Player.get_player_by_id(board.players, board.winner).name}, player id: {Player.get_player_by_id(board.players, board.winner).id}')
     message = protocols.game_over(board.winner, last_move)
     for key in GAME_CONTEXT['connections']:
         protocols.send_bytes(protocols.make_json_bytes(message), key.fileobj, key.data.pub_key, True)
