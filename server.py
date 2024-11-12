@@ -189,27 +189,30 @@ def close_bad_connection(key, addr, sock):
     SERVER_CONTEXT['conn_ct'] -= 1
     protocols.print_and_log(f"Current number of connections: {SERVER_CONTEXT['conn_ct']}")
 
-def set_up_server_socket(port):
+def set_up_server_socket():
+    port = DEFAULT_PORT
+    if args.port is not None:
+        port = args.port
     try:
         ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ss.bind(('0.0.0.0', port)) # static port for debugging
-        # SERVER_SOCKET.bind(('0.0.0.0', 0)) # any available port 
         ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            ss.bind(('0.0.0.0', port)) # static port, default when one isn't provided at startup
+        except OSError as e:
+            ss.bind(('0.0.0.0', 0)) # any available port, if the requested one won't bind
+            protocols.print_and_log(f"Port {port} is unavailable, using port {ss.getsockname()[1]}")
         ss.listen()
         ss.setblocking(False)
         SEL.register(ss, selectors.EVENT_READ, data=None)
         SERVER_CONTEXT['server_socket'] = ss
     except:
-        #TODO add error trace
+        traceback.print_exc()
         protocols.print_and_log('Unable to set up server connection. Exiting.')
         exit()
 
-def handle_args(args):
-    port = DEFAULT_PORT
-    if args.port is not None:
-        port = args.port
-    set_up_server_socket(port)
+def handle_args():
     protocols.print_and_log('STARTING SERVER')
+    set_up_server_socket()
     hostname = socket.gethostname()
     SERVER_CONTEXT['pub_key'], SERVER_CONTEXT['pri_key'] = rsa.newkeys(512)
     if args.dns:
@@ -226,7 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', type=int, help='Port number for the server to listen on')
     parser.add_argument('-d', '--dns', action='store_true', help='Prints the DNS name of the server')
     args = parser.parse_args()
-    handle_args(args)
+    handle_args()
     main()
 
 # python3 server.py -i -p
