@@ -83,6 +83,24 @@ The server maintains state for both the connections to it and the currently runn
  
 The server makes the player’s moves on the board, updating the board state and checking if the moving is a winning one. If it is, the players are notified, their connections are closed, and the server returns to a waiting-for-players state. If not, the server communicates the move to the other player so they can make their move.
 
+
+## Gameplay, Game State, and UI
+
+**Game State Management (continued):**
+* The server updates state (player info, tile placements, game termination state) and communicates it to the clients so they can display the state of the board during gameplay.
+
+**Input Handling:**
+* Clients allow users to select a column on the board to ‘drop’ their tile. Clients enforce the selection is valid (within the board boundaries and in a column that is not full) before communicating the move to the server.
+
+**Winning Conditions:**
+* Server checks at every move whether a game-over state has been reached. Game over states include: a player has won, the game is a draw, or a player has forfeited (when they disconnect prematurely)
+
+**Game Over Handling:**
+* When the game is determined to be over, the server communicates the winner (or indicates the game is a draw) to the clients. To play again, the clients reconnect to the server.
+
+**User Interface (UI):**
+* The board is displayed to the players with a simple terminal board representation. The players have their name and tiles displayed in their assigned colors. The players are clearly asked for their name at the beginning of the game and the number that corresponds to the column they want to ‘drop’ their tile into
+
 ## Technologies used:
 * Python
 * Sockets
@@ -95,3 +113,4 @@ The server makes the player’s moves on the board, updating the board state and
 
 ## Sprint 1 Behavior:
 Two clients can connect to the server and specify their name once their connection is accepted. The server sends back each client their player id.
+
