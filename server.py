@@ -101,10 +101,12 @@ def notify_other_player():
         protocols.send_bytes(protocols.make_json_bytes(message), cur_player.fileobj, cur_player.data.pub_key, True)
 
 def make_players_move(message, key):
+    if len(GAME_CONTEXT['connections']) != 2:
+        return # message was sent after the other player disconnected while live client was waiting for user input
+        
     cur_player_key = GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]
     # print(f"start game: cur player: {GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']]}")
     print(f"The player whose turn it is making a move?: {cur_player_key.data.player_id} == {key.data.player_id} ? : {cur_player_key.data.player_id == key.data.player_id}")
-
     board = GAME_CONTEXT['board']
     last_move = message['move']
     board.place_tile(last_move, key.data.player_id)
@@ -113,9 +115,10 @@ def make_players_move(message, key):
     with open(protocols.SERVER_LOG_PATH, 'a') as file:
         file.write(board.draw_board_for_log()) #print in log with player id
 
-    protocols.print_and_log('Checking for game over')
-    if board.game_over():
-        notify_game_over(last_move)
+    over = board.game_over()
+    protocols.print_and_log(f'Checking for game over: {over}')
+    if over:
+        game_over(last_move)
     GAME_CONTEXT['cur_player'] = (GAME_CONTEXT['cur_player'] + 1) % 2
 
     message = protocols.your_turn(last_move)
@@ -123,10 +126,13 @@ def make_players_move(message, key):
     player_public_key = GAME_CONTEXT['connections'][GAME_CONTEXT['cur_player']].data.pub_key
     protocols.send_bytes(protocols.make_json_bytes(message), next_player_socket, player_public_key, True)
 
-def notify_game_over(last_move):
+def game_over(last_move):
     board = GAME_CONTEXT['board']
     protocols.print_and_log('game over')
-    protocols.print_and_log(f'WINNER IS {Player.get_player_by_id(board.players, board.winner).name}, player id: {Player.get_player_by_id(board.players, board.winner).id}')
+    if board.winner == Board.FILL_VALUE:
+        protocols.print_and_log("The game is a draw")
+    else:
+        protocols.print_and_log(f'WINNER IS {Player.get_player_by_id(board.players, board.winner).name}, player id: {Player.get_player_by_id(board.players, board.winner).id}')
     message = protocols.game_over(board.winner, last_move)
     for key in GAME_CONTEXT['connections']:
         protocols.send_bytes(protocols.make_json_bytes(message), key.fileobj, key.data.pub_key, True)
@@ -180,7 +186,16 @@ def close_bad_connection(key, addr, sock):
     protocols.print_and_log(f"Closing connection to {addr}")
     if key in GAME_CONTEXT['connections']:
         # TODO make the remaining player in the game the winner and end the game
+        #remove the connection from game connections
         GAME_CONTEXT['connections'].remove(key)
+        # manually set the winner to the remaining player
+        board = GAME_CONTEXT['board']
+        if len(GAME_CONTEXT['connections']) > 0:
+            other_key = GAME_CONTEXT['connections'][0]
+            protocols.print_and_log(f'Player {key.data.player_name} disconnected; Game forfeited to {other_key.data.player_name}')
+            board.winner = other_key.data.player_id
+            message = protocols.game_over(board.winner, -2)
+            protocols.send_bytes(protocols.make_json_bytes(message), other_key.fileobj, other_key.data.pub_key, True)
     if key in SERVER_CONTEXT['homeless']:
         SERVER_CONTEXT['homeless'].remove(key)
         SERVER_CONTEXT['reg_ct'] -= 1
@@ -189,27 +204,31 @@ def close_bad_connection(key, addr, sock):
     SERVER_CONTEXT['conn_ct'] -= 1
     protocols.print_and_log(f"Current number of connections: {SERVER_CONTEXT['conn_ct']}")
 
-def set_up_server_socket(port):
+
+def set_up_server_socket():
+    port = DEFAULT_PORT
+    if args.port is not None:
+        port = args.port
     try:
         ss = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ss.bind(('0.0.0.0', port)) # static port for debugging
-        # SERVER_SOCKET.bind(('0.0.0.0', 0)) # any available port 
         ss.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            ss.bind(('0.0.0.0', port)) # static port, default when one isn't provided at startup
+        except OSError as e:
+            ss.bind(('0.0.0.0', 0)) # any available port, if the requested one won't bind
+            protocols.print_and_log(f"Port {port} is unavailable, using port {ss.getsockname()[1]}")
         ss.listen()
         ss.setblocking(False)
         SEL.register(ss, selectors.EVENT_READ, data=None)
         SERVER_CONTEXT['server_socket'] = ss
     except:
-        #TODO add error trace
+        traceback.print_exc()
         protocols.print_and_log('Unable to set up server connection. Exiting.')
         exit()
 
-def handle_args(args):
-    port = DEFAULT_PORT
-    if args.port is not None:
-        port = args.port
-    set_up_server_socket(port)
+def handle_args():
     protocols.print_and_log('STARTING SERVER')
+    set_up_server_socket()
     hostname = socket.gethostname()
     SERVER_CONTEXT['pub_key'], SERVER_CONTEXT['pri_key'] = rsa.newkeys(512)
     if args.dns:
@@ -226,7 +245,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', type=int, help='Port number for the server to listen on')
     parser.add_argument('-d', '--dns', action='store_true', help='Prints the DNS name of the server')
     args = parser.parse_args()
-    handle_args(args)
+    handle_args()
     main()
 
 # python3 server.py -i -p

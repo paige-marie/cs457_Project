@@ -3,14 +3,15 @@ import auxillary as aux
 import numpy as np
 
 NUM_COLS, NUM_ROWS = 7, 6
-FILL_VALUE = -1
+# NUM_COLS, NUM_ROWS = 3, 3 # change to test draw state (really hard not to accidentally win)
 WINNING_NUMBER = 4
 CIRCLE = '\u25CF'
 
 class Board:
+    FILL_VALUE = -1
 
     def __init__(self, players, in_terminal=True):
-        self.board_arr = np.full((NUM_ROWS, NUM_COLS), FILL_VALUE, dtype=int)
+        self.board_arr = np.full((NUM_ROWS, NUM_COLS), self.FILL_VALUE, dtype=int)
         self.players = players
         self.winner = -1
         self.in_terminal = in_terminal 
@@ -20,7 +21,7 @@ class Board:
         playr = self.players[playr_num]
         if selected_column < len(self.board_arr[0]):
             for row in self.board_arr:
-                if row[selected_column] == FILL_VALUE:
+                if row[selected_column] == self.FILL_VALUE:
                     row[selected_column] = playr.id
                     placed = True
                     break
@@ -39,12 +40,13 @@ class Board:
         # print(f'vertical win = {vertical}')
         # print(f'positive win = {positive}')
         # print(f'negative win = {negative}')
-        return horozontal or vertical or positive or negative
+        board_is_full = not np.any(self.board_arr == self.FILL_VALUE)
+        return horozontal or vertical or positive or negative or board_is_full
     
     def check_straight(self, b):
         for row in b:
             for i in range(len(row) - WINNING_NUMBER + 1):
-                if row[i] != FILL_VALUE and np.all(row[i:i+WINNING_NUMBER] == row[i]):
+                if row[i] != self.FILL_VALUE and np.all(row[i:i+WINNING_NUMBER] == row[i]):
                     self.winner = row[i]
                     return True
         return False
@@ -52,7 +54,7 @@ class Board:
     def check_diagonal(self, b):
         for r in range(len(b) + 1 - WINNING_NUMBER):
             for c in range(len(b[0]) + 1 - WINNING_NUMBER):
-                if b[r][c] != FILL_VALUE and all(b[r][c] == b[r+k][c+k] for k in range(WINNING_NUMBER)):
+                if b[r][c] != self.FILL_VALUE and all(b[r][c] == b[r+k][c+k] for k in range(WINNING_NUMBER)):
                     self.winner = b[r][c]
                     return True
         return False

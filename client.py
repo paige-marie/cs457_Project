@@ -34,36 +34,44 @@ def main():
             players = sorted(players)
             board = Board(players)
             while(True):
-                recv_data = sock.recv(11)
-                if recv_data:
-                    message = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
-                    # print(message)
-                    if message['proto'] == protocols.Protocols.GAME_OVER:
-                        game_over = True
-                        break
-                    if message['proto'] != protocols.Protocols.YOUR_TURN:
-                        raise auxillary.CustomError(f"Unexpected message from server: {message}")
-                        continue
-                    my_move = take_my_turn(message, board, players)
-                    message = protocols.make_move(my_move)
-                    protocols.send_bytes(protocols.make_json_bytes(message), sock, KEYS['server_pub_key'], True)
+                try:
+                    recv_data = sock.recv(11)
+                    if recv_data:
+                        message = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
+                        # print(message)
+                        if message['proto'] == protocols.Protocols.GAME_OVER:
+                            game_over = True
+                            break
+                        if message['proto'] != protocols.Protocols.YOUR_TURN:
+                            raise auxillary.CustomError(f"Unexpected message from server: {message}")
+                            
+                        my_move = take_my_turn(message, board, players)
+                        message = protocols.make_move(my_move)
+                        protocols.send_bytes(protocols.make_json_bytes(message), sock, KEYS['server_pub_key'], True)
 
-                else:
-                    print('Server has disconnected, closing socket')
-                    sock.close()
-                    break
+                    else:
+                        print('Server has disconnected, closing socket')
+                        sock.close()
+                        break
+                except auxillary.CustomError:
+                    continue
             
             if game_over:
-                # auxillary.color_text(players[MY_ID], players[MY_ID].name)
                 # if I am not the winner, reprint the board with the winning move
-                winning_player = Player.get_player_by_id(players, message['winner'])
-                if winning_player.id != MY_ID:
+                if message['last_move'] == -2:
+                    print(f"{auxillary.color_text(other_player, other_player.name)} has forfeited.")
+                if message['winner'] != MY_ID:
                     col = message['last_move']
                     board.place_tile(col, (MY_ID + 1)%2)
                     auxillary.clear_terminal()
                     print(board)
-                print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
-            else:
+                # TODO if the winner is -1, then the game was a draw
+                if message['winner'] == -1:
+                    print("There are no more valid moves; the game is a draw")
+                else:
+                    winning_player = Player.get_player_by_id(players, message['winner'])
+                    print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
+            else: # pretty much only caused by unexpected message from server
                 print(f"The game was terminated early.")
     
     except KeyboardInterrupt:
@@ -109,7 +117,7 @@ def get_other_player_info(sock):
     return other_player
 
 def take_my_turn(message, board, players):
-    if message['last_move'] != -1:
+    if message['last_move'] != -1: #place the other players tile because this isn't the first move
         col = message['last_move']
         board.place_tile(col, (MY_ID + 1)%2)
         auxillary.clear_terminal()
