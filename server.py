@@ -67,6 +67,7 @@ def register_a_player(message, key):
         error_bytes = protocols.make_json_bytes(protocols.error_response(protocols.Errors.PUBLIC_KEY_NOT_VERIFIED))
         protocols.send_bytes(error_bytes, key.sock, None, False)
         close_bad_connection(key, key.data.addr, key.sock)
+        return
 
     player_id = key.data.player_id
     key.data.player_name = message['name']

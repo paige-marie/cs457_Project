@@ -11,16 +11,17 @@ class CertificateAuthority:
         self.is_server = is_server
 
     def verify_signature(self, to_be_verified: rsa.PublicKey, signature: bytes) -> bool:
+        """Simulates verifying signature with installed public key of CA"""
         to_be_verified_str = key_to_string(to_be_verified)
         hash_hex = self._get_hash(to_be_verified_str)
         try:
             rsa.verify(hash_hex.encode('utf-8'), signature, self.ca_keys['pri_key'])
             return True
         except rsa.VerificationError:
-            # print("Signature verification failed.")
             return False
 
     def create_signature(self, to_be_signed) -> bytes:
+        """Simulates getting certificate authenticated by CA"""
         if type(to_be_signed) != str:
             to_be_signed = key_to_string(to_be_signed)
         hash_digest = self._get_hash(to_be_signed)
@@ -61,6 +62,7 @@ class CertificateAuthority:
         hash_hex = hasher.hexdigest()
         return hash_hex
 
+# Everything below is for testing and debugging only
 def main():
     ca_obj = CertificateAuthority(True)
     server_pub_key, server_pri_key = rsa.newkeys(512)
@@ -73,8 +75,6 @@ def main():
     print(f"verified: {verified}")
 
 def key_to_string(key):
-    if type(key) == str:
-        return key
     return base64.b64encode(key.save_pkcs1(format='PEM')).decode('utf-8')
 
 def make_json_bytes(data):
