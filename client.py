@@ -16,9 +16,9 @@ KEYS = {}
 
 def main():
     game_over = False
+    
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # sock.settimeout(10)
             try:
                 sock.connect((args.server_ip, args.port))
                 if args.dns:
