@@ -3,7 +3,7 @@ import auxillary as aux
 import numpy as np
 
 NUM_COLS, NUM_ROWS = 7, 6
-# NUM_COLS, NUM_ROWS = 3, 3 # change to test draw state (really hard not to accidentally win)
+# NUM_COLS, NUM_ROWS = 3, 3     # change to test draw state (really hard not to accidentally win)
 WINNING_NUMBER = 4
 CIRCLE = '\u25CF'
 

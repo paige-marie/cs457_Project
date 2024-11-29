@@ -3,6 +3,8 @@ import struct
 import rsa
 import base64
 
+from auxillary import CustomError
+
 IS_SERVER = False
 SERVER_LOG_PATH = 'server-log.log'
 
@@ -65,7 +67,7 @@ def send_bytes(message_bytes, sock, other_pubKey, encrypt): #will only be none a
 def read_json_bytes(recv_data, sock, my_priKey): #will only be none for the first messages between client and server
     label, json_length, encrypt_flag = struct.unpack('>6sI?', recv_data)
     if label != 'length':
-        pass #TODO handle case where message is not the proto we expect. Maybe send error message and close the connection? Probably need to raise custom exception and do that back in the caller function where server context can be updated
+        raise CustomError("Message recieved has an incompatible header. Ignoring message.")
     data = sock.recv(json_length)
     if encrypt_flag:
         data = rsa.decrypt(data, my_priKey)

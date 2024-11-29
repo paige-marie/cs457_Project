@@ -34,14 +34,13 @@ def main():
             players = [my_player, other_player]
             players = sorted(players)
             Player.set_player_colors(players)
-            
+
             board = Board(players)
             while(True):
                 try:
                     recv_data = sock.recv(11)
                     if recv_data:
                         message = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
-                        # print(message)
                         if message['proto'] == protocols.Protocols.GAME_OVER:
                             game_over = True
                             break
@@ -56,7 +55,8 @@ def main():
                         print('Server has disconnected, closing socket')
                         sock.close()
                         break
-                except auxillary.CustomError:
+                except auxillary.CustomError as e:
+                    print(e)
                     continue
             
             if game_over:
