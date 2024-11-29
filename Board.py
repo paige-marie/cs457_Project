@@ -32,15 +32,10 @@ class Board:
         """
         Game over check, will only be called by the server
         """
-        #TODO return early if any of these checks are true instead of checking them all
         horozontal = self.check_straight(self.board_arr)
         vertical = self.check_straight(self.board_arr.T)
         positive = self.check_diagonal(self.board_arr)
         negative = self.check_diagonal(np.flip(self.board_arr, 0))
-        # print(f'horozontal win = {horozontal}')
-        # print(f'vertical win = {vertical}')
-        # print(f'positive win = {positive}')
-        # print(f'negative win = {negative}')
         board_is_full = not np.any(self.board_arr == self.FILL_VALUE)
         return horozontal or vertical or positive or negative or board_is_full
     

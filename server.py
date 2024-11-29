@@ -93,7 +93,13 @@ def start_game():
 
     for p in range(2):
         cur = GAME_CONTEXT['connections'][p]
-        players.append( Player(cur.data.player_name, cur.data.player_id) )
+        p = Player(cur.data.player_name, cur.data.player_id)
+        print(p)
+        players.append( p )
+    # players = sorted(players)
+    Player.set_player_colors(players)
+    for p in players:
+        print(p)
 
     GAME_CONTEXT['cur_player'] = random.choice([0,1])
     GAME_CONTEXT['board'] = Board(players)
@@ -152,7 +158,6 @@ def game_over(last_move):
     message = protocols.game_over(board.winner, last_move)
     for key in GAME_CONTEXT['connections']:
         protocols.send_bytes(protocols.make_json_bytes(message), key.fileobj, key.data.pub_key, True)
-        # close_bad_connection(key, key.data.addr, key.fileobj, False )
 
 def check_sockets():
     try:
@@ -167,7 +172,7 @@ def check_sockets():
         print(e)
 
 def accept_wrapper(sock):
-    conn, addr = sock.accept()  # Should be ready to read
+    conn, addr = sock.accept()
     protocols.print_and_log(f"accepted connection from {addr}")
     if SERVER_CONTEXT['conn_ct'] >= 2:
         # send message to say the game is full
@@ -188,13 +193,11 @@ def service_connection(key, mask):
     if mask & selectors.EVENT_READ:
         try:
             recv_data = sock.recv(11)
-            #TODO check there's actually 11 bytes to be read
             if recv_data:
                 message = protocols.read_json_bytes(recv_data, sock, SERVER_CONTEXT['pri_key'])
                 handle_events(message, key)
             else:
                 close_bad_connection(key, data.addr, sock)
-                # SERVER_CONTEXT['reg_ct'] -= 1 # need a way to detect if a closed connection was a registered player (or assume players will never disconnect randomly)
         except ConnectionResetError:
             close_bad_connection(key, data.addr, sock)
 
