@@ -6,10 +6,14 @@ import random
 import rsa
 import traceback
 
+is_server = True 
 import protocols
-protocols.IS_SERVER = True
+protocols.IS_SERVER = is_server
 from Player import Player
 from Board import Board
+from simulate_certificate_authority import CertificateAuthority
+
+ca = CertificateAuthority(is_server)
 
 SEL = selectors.DefaultSelector()
 SERVER_CONTEXT = {
@@ -54,11 +58,21 @@ def handle_events(message, key):
 
 def register_a_player(message, key):
     """register a player with the server as waiting for a game, including associating their socket to their public key for decryption"""
+    #TODO add signature verification
+    verified = ca.verify_signature(message['pub_key'], message['signature'])
+    protocols.print_and_log(f'Key verified: {verified}')
+    if not verified: 
+        # close connection to client who we can't verify
+        protocols.print_and_log("Close connection to client with unverified key")
+        error_bytes = protocols.make_json_bytes(protocols.error_response(protocols.Errors.PUBLIC_KEY_NOT_VERIFIED))
+        protocols.send_bytes(error_bytes, key.sock, None, False)
+        close_bad_connection(key, key.data.addr, key.sock)
+
     player_id = key.data.player_id
     key.data.player_name = message['name']
     key.data.pub_key = message['pub_key']
 
-    response = protocols.confirm_registration(player_id, SERVER_CONTEXT['pub_key'])
+    response = protocols.confirm_registration(player_id, SERVER_CONTEXT['pub_key'], ca)
     SERVER_CONTEXT['reg_ct'] += 1
     SERVER_CONTEXT['homeless'].append(key)
     repsonse_bytes = protocols.make_json_bytes(response)

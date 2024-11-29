@@ -8,6 +8,10 @@ from Player import Player
 from Board import Board
 import auxillary
 
+from simulate_certificate_authority import CertificateAuthority
+
+ca = CertificateAuthority(is_server=False)
+
 KEYS = {}
 
 def main():
@@ -76,16 +80,17 @@ def main():
     
     except KeyboardInterrupt:
         print("caught keyboard interrupt, exiting")
+    except auxillary.CustomError as e: 
+        print(e)
     except Exception as e:
         traceback.print_exc()
         print(f"An unexpected error occurred: {e}")
 
 
 def setup(sock):
-    KEYS['pub_key'], KEYS['pri_key'] = rsa.newkeys(512)
-    # print(f"my pub key: \n{KEYS['pub_key']}")
+    KEYS['pub_key'], KEYS['pri_key'] = rsa.newkeys(512) # TODO load keys from a file
     name = input('Please enter your name: ')
-    message = protocols.register_with_server(name, KEYS['pub_key'])
+    message = protocols.register_with_server(name, KEYS['pub_key'], ca)
     protocols.send_bytes( protocols.make_json_bytes(message), sock, None, False)
     try:
         recv_data = sock.recv(11)
@@ -102,8 +107,13 @@ def setup(sock):
         print('Exiting')
         exit()
         
-    # print(response)
+    
     global MY_ID
+
+    verified = ca.verify_signature(response['pub_key'], response['signature'])
+    if not verified: 
+        raise auxillary.CustomError("Server's public key could not be verified. Disconnecting and exiting.")
+    print(f'Server key verified: {verified}')
     KEYS['server_pub_key'] = response['pub_key']
     MY_ID = response['player_id']
     my_player = Player(name, MY_ID, True)
@@ -112,7 +122,6 @@ def setup(sock):
 def get_other_player_info(sock):
     recv_data = sock.recv(11)
     response = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
-    # print(response)
     other_player = Player(response['other_name'], response['other_id'], False)
     return other_player
 
