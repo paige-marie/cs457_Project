@@ -82,6 +82,9 @@ def main():
     except Exception as e:
         traceback.print_exc()
         print(f"An unexpected error occurred: {e}")
+    finally:
+        sock.close()
+        print("Restart to play again")
 
 
 def setup(sock):
