@@ -110,6 +110,9 @@ The server makes the player’s moves on the board, updating the board state and
 **User Interface (UI):**
 * The board is displayed to the players with a simple terminal board representation. The players have their name and tiles displayed in their assigned colors. The players are clearly asked for their name at the beginning of the game and the number that corresponds to the column they want to ‘drop’ their tile into
 
+## Known Issues
+- Combinations of user disconnect states before the game has started, either before or after the player has been registered, interrupt the assignment of player ids, which affects the downstream action of assigning colors and play order. This is an intermitant issue that is difficult to replicate and isolate. Even now, the bug is believed to be fixed, but may not be. Gameplay proceeds normally, but tile colors are the same (which makes the game impossible for the user to play).
+
 ## Technologies used:
 * Python
 * Sockets
