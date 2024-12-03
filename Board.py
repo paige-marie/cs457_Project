@@ -20,7 +20,7 @@ class Board:
         selected_column -= 1
         placed = False
         playr = self.players[playr_num]
-        if selected_column < len(self.board_arr[0]):
+        if selected_column < len(self.board_arr[0]) and selected_column >= 0:
             for row in self.board_arr:
                 if row[selected_column] == self.FILL_VALUE:
                     row[selected_column] = playr.id
