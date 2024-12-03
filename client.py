@@ -8,13 +8,17 @@ from Player import Player
 from Board import Board
 import auxillary
 
+from simulate_certificate_authority import CertificateAuthority
+
+ca = CertificateAuthority(is_server=False)
+
 KEYS = {}
 
 def main():
     game_over = False
+    
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # sock.settimeout(10)
             try:
                 sock.connect((args.server_ip, args.port))
                 if args.dns:
@@ -23,22 +27,20 @@ def main():
             except ConnectionRefusedError:
                 print("Error: Unable to connect to server. Check the address and port and try again.\nExiting")
                 return
-            # except socket.error as e:
-            #     print(f"Error: Socket error occurred - {e}")
-            #     return
 
             my_player = setup(sock)
             other_player = get_other_player_info(sock)
 
             players = [my_player, other_player]
             players = sorted(players)
+            Player.set_player_colors(players)
+
             board = Board(players)
             while(True):
                 try:
                     recv_data = sock.recv(11)
                     if recv_data:
                         message = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
-                        # print(message)
                         if message['proto'] == protocols.Protocols.GAME_OVER:
                             game_over = True
                             break
@@ -53,57 +55,61 @@ def main():
                         print('Server has disconnected, closing socket')
                         sock.close()
                         break
-                except auxillary.CustomError:
+                except auxillary.CustomError as e:
+                    print(e)
                     continue
             
             if game_over:
-                # if I am not the winner, reprint the board with the winning move
-                if message['last_move'] == -2:
+                if message['last_move'] == -2: 
                     print(f"{auxillary.color_text(other_player, other_player.name)} has forfeited.")
-                if message['winner'] != MY_ID:
+                if message['winner'] != MY_ID: # if I am not the winner, reprint the board with the winning move
                     col = message['last_move']
                     board.place_tile(col, (MY_ID + 1)%2)
                     auxillary.clear_terminal()
                     print(board)
-                # TODO if the winner is -1, then the game was a draw
                 if message['winner'] == -1:
                     print("There are no more valid moves; the game is a draw")
                 else:
                     winning_player = Player.get_player_by_id(players, message['winner'])
                     print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
-            else: # pretty much only caused by unexpected message from server
+            else: # pretty much only caused by unexpected message from server, like it shuts down
                 print(f"The game was terminated early.")
     
     except KeyboardInterrupt:
-        print("caught keyboard interrupt, exiting")
+        print(" Caught keyboard interrupt, exiting")
+    except auxillary.CustomError as e: 
+        print(e)
     except Exception as e:
         traceback.print_exc()
         print(f"An unexpected error occurred: {e}")
+    finally:
+        sock.close()
+        print("Restart to play again")
 
 
 def setup(sock):
     KEYS['pub_key'], KEYS['pri_key'] = rsa.newkeys(512)
-    # print(f"my pub key: \n{KEYS['pub_key']}")
     name = input('Please enter your name: ')
-    message = protocols.register_with_server(name, KEYS['pub_key'])
+    message = protocols.register_with_server(name, KEYS['pub_key'], ca)
     protocols.send_bytes( protocols.make_json_bytes(message), sock, None, False)
     try:
         recv_data = sock.recv(11)
-        response = protocols.read_json_bytes(recv_data, sock, None) # KEYS['pri_key'])
+        response = protocols.read_json_bytes(recv_data, sock, None)
     except socket.error as e:
         print(f"Error: Socket error during setup - {e}")
         return
-    # except struct.error as e:
-    #     print(f"Error: Struct error - {e}")
-    #     return
 
     if response['proto'] == protocols.Protocols.ERROR:
         print(response['error_message'])
         print('Exiting')
         exit()
-        
-    # print(response)
+    
     global MY_ID
+
+    verified = ca.verify_signature(response['pub_key'], response['signature'])
+    if not verified: 
+        raise auxillary.CustomError("Server's public key could not be verified. Disconnecting and exiting.")
+    print(f'Server key verified: {verified}')
     KEYS['server_pub_key'] = response['pub_key']
     MY_ID = response['player_id']
     my_player = Player(name, MY_ID, True)
@@ -112,7 +118,6 @@ def setup(sock):
 def get_other_player_info(sock):
     recv_data = sock.recv(11)
     response = protocols.read_json_bytes(recv_data, sock, KEYS['pri_key'])
-    # print(response)
     other_player = Player(response['other_name'], response['other_id'], False)
     return other_player
 
@@ -154,7 +159,6 @@ if __name__ == '__main__':
                         required=True,
                         type=int,
                         help='The port number the server is listening at')
-    # TODO dns can be used to create socket, simply set args.ip to this and it will work the same
     parser.add_argument('-n', '--dns',
                         action='store_true',
                         # metavar='DNS of Server', 

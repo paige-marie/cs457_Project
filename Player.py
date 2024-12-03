@@ -4,20 +4,22 @@ class Player:
     player_count = 0
 
     def __init__(self, name, player_id, me=False) -> None:
-        # if Player.player_count >= 2:
-        #     raise aux.CustomError("Cannot have more than 2 players")
-
         self.is_me = me
         self.name = name
-        # self.id = Player.player_count
         self.id = player_id % 2
-        self.color, self.color_code = self.get_color(self)
+        self.color, self.color_code = ('white', aux.WHITE) # temporary
         Player.player_count += 1
 
     @staticmethod
+    def set_player_colors(players):
+        players[0].color, players[0].color_code = ('red', aux.RED)
+        players[0].id = 0
+        players[1].color, players[1].color_code = ('blue', aux.BLUE)
+        players[1].id = 1
+
+    @staticmethod
     def get_color(playr):
-        # TODO decouple from the player id, maybe move this function into the board class and determine it by position in list?
-        return ('red', aux.RED) if playr.id % 2 == 1 else ('blue', aux.BLUE)
+        return playr.color, playr.color_code
     
     @staticmethod
     def get_player_by_id(players, id):

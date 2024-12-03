@@ -6,10 +6,14 @@ import random
 import rsa
 import traceback
 
+is_server = True 
 import protocols
-protocols.IS_SERVER = True
+protocols.IS_SERVER = is_server
 from Player import Player
 from Board import Board
+from simulate_certificate_authority import CertificateAuthority
+
+ca = CertificateAuthority(is_server)
 
 SEL = selectors.DefaultSelector()
 SERVER_CONTEXT = {
@@ -54,11 +58,22 @@ def handle_events(message, key):
 
 def register_a_player(message, key):
     """register a player with the server as waiting for a game, including associating their socket to their public key for decryption"""
+    #TODO add signature verification
+    verified = ca.verify_signature(message['pub_key'], message['signature'])
+    protocols.print_and_log(f'Key verified: {verified}')
+    if not verified: 
+        # close connection to client who we can't verify
+        protocols.print_and_log("Close connection to client with unverified key")
+        error_bytes = protocols.make_json_bytes(protocols.error_response(protocols.Errors.PUBLIC_KEY_NOT_VERIFIED))
+        protocols.send_bytes(error_bytes, key.sock, None, False)
+        close_bad_connection(key, key.data.addr, key.sock)
+        return
+
     player_id = key.data.player_id
     key.data.player_name = message['name']
     key.data.pub_key = message['pub_key']
 
-    response = protocols.confirm_registration(player_id, SERVER_CONTEXT['pub_key'])
+    response = protocols.confirm_registration(player_id, SERVER_CONTEXT['pub_key'], ca)
     SERVER_CONTEXT['reg_ct'] += 1
     SERVER_CONTEXT['homeless'].append(key)
     repsonse_bytes = protocols.make_json_bytes(response)
@@ -78,7 +93,13 @@ def start_game():
 
     for p in range(2):
         cur = GAME_CONTEXT['connections'][p]
-        players.append( Player(cur.data.player_name, cur.data.player_id) )
+        p = Player(cur.data.player_name, cur.data.player_id)
+        print(p)
+        players.append( p )
+    # players = sorted(players)
+    Player.set_player_colors(players)
+    for p in players:
+        print(p)
 
     GAME_CONTEXT['cur_player'] = random.choice([0,1])
     GAME_CONTEXT['board'] = Board(players)
@@ -119,6 +140,7 @@ def make_players_move(message, key):
     protocols.print_and_log(f'Checking for game over: {over}')
     if over:
         game_over(last_move)
+        return
     GAME_CONTEXT['cur_player'] = (GAME_CONTEXT['cur_player'] + 1) % 2
 
     message = protocols.your_turn(last_move)
@@ -150,7 +172,7 @@ def check_sockets():
         print(e)
 
 def accept_wrapper(sock):
-    conn, addr = sock.accept()  # Should be ready to read
+    conn, addr = sock.accept()
     protocols.print_and_log(f"accepted connection from {addr}")
     if SERVER_CONTEXT['conn_ct'] >= 2:
         # send message to say the game is full
@@ -171,32 +193,24 @@ def service_connection(key, mask):
     if mask & selectors.EVENT_READ:
         try:
             recv_data = sock.recv(11)
-            #TODO check there's actually 11 bytes to be read
             if recv_data:
                 message = protocols.read_json_bytes(recv_data, sock, SERVER_CONTEXT['pri_key'])
                 handle_events(message, key)
             else:
                 close_bad_connection(key, data.addr, sock)
-                # SERVER_CONTEXT['reg_ct'] -= 1 # need a way to detect if a closed connection was a registered player (or assume players will never disconnect randomly)
         except ConnectionResetError:
             close_bad_connection(key, data.addr, sock)
 
 def close_bad_connection(key, addr, sock):
     """update server and game state and close server side socket when a player disconnects"""
-    protocols.print_and_log(f"Closing connection to {addr}")
+    protocols.print_and_log(f"Closing connection to {addr} {key.data.player_name}")
     if key in GAME_CONTEXT['connections']:
-        # TODO make the remaining player in the game the winner and end the game
         #remove the connection from game connections
         GAME_CONTEXT['connections'].remove(key)
-        # manually set the winner to the remaining player
         board = GAME_CONTEXT['board']
-        if len(GAME_CONTEXT['connections']) > 0:
-            other_key = GAME_CONTEXT['connections'][0]
-            protocols.print_and_log(f'Player {key.data.player_name} disconnected; Game forfeited to {other_key.data.player_name}')
-            board.winner = other_key.data.player_id
-            message = protocols.game_over(board.winner, -2)
-            protocols.send_bytes(protocols.make_json_bytes(message), other_key.fileobj, other_key.data.pub_key, True)
-    if key in SERVER_CONTEXT['homeless']:
+        if not board.game_over() :
+            forfeit_game(key, board)
+    if key in SERVER_CONTEXT['homeless']: # remove connection from server context if it's been saved
         SERVER_CONTEXT['homeless'].remove(key)
         SERVER_CONTEXT['reg_ct'] -= 1
     SEL.unregister(sock)
@@ -204,6 +218,14 @@ def close_bad_connection(key, addr, sock):
     SERVER_CONTEXT['conn_ct'] -= 1
     protocols.print_and_log(f"Current number of connections: {SERVER_CONTEXT['conn_ct']}")
 
+def forfeit_game(key, board):
+    # manually set the winner to the remaining player
+    if len(GAME_CONTEXT['connections']) > 0:
+        other_key = GAME_CONTEXT['connections'][0]
+        protocols.print_and_log(f'Player {key.data.player_name} disconnected; Game forfeited to {other_key.data.player_name}')
+        board.winner = other_key.data.player_id
+        message = protocols.game_over(board.winner, -2)
+        protocols.send_bytes(protocols.make_json_bytes(message), other_key.fileobj, other_key.data.pub_key, True)
 
 def set_up_server_socket():
     port = DEFAULT_PORT

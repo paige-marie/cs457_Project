@@ -3,7 +3,7 @@ import auxillary as aux
 import numpy as np
 
 NUM_COLS, NUM_ROWS = 7, 6
-# NUM_COLS, NUM_ROWS = 3, 3 # change to test draw state (really hard not to accidentally win)
+# NUM_COLS, NUM_ROWS = 3, 3     # change to test draw state (really hard not to accidentally win)
 WINNING_NUMBER = 4
 CIRCLE = '\u25CF'
 
@@ -17,9 +17,10 @@ class Board:
         self.in_terminal = in_terminal 
 
     def place_tile(self, selected_column: int, playr_num):
+        selected_column -= 1
         placed = False
         playr = self.players[playr_num]
-        if selected_column < len(self.board_arr[0]):
+        if selected_column < len(self.board_arr[0]) and selected_column >= 0:
             for row in self.board_arr:
                 if row[selected_column] == self.FILL_VALUE:
                     row[selected_column] = playr.id
@@ -31,15 +32,10 @@ class Board:
         """
         Game over check, will only be called by the server
         """
-        #TODO return early if any of these checks are true instead of checking them all
         horozontal = self.check_straight(self.board_arr)
         vertical = self.check_straight(self.board_arr.T)
         positive = self.check_diagonal(self.board_arr)
         negative = self.check_diagonal(np.flip(self.board_arr, 0))
-        # print(f'horozontal win = {horozontal}')
-        # print(f'vertical win = {vertical}')
-        # print(f'positive win = {positive}')
-        # print(f'negative win = {negative}')
         board_is_full = not np.any(self.board_arr == self.FILL_VALUE)
         return horozontal or vertical or positive or negative or board_is_full
     
@@ -68,7 +64,7 @@ class Board:
     
     def draw_board_in_terminal(self, human_board):
         board_str = "\n"
-        board_str += '  ' + "   ".join(str(n) for n in range(NUM_COLS)) + ' \n\n'
+        board_str += '  ' + "   ".join(str(n+1) for n in range(NUM_COLS)) + ' \n\n'
         for row in human_board:
             board_str += '| ' + " | ".join(
                 aux.color_text(self.players[0], CIRCLE) if c == self.players[0].id else
@@ -81,7 +77,7 @@ class Board:
     def draw_board_for_log(self):
         human_board = np.flip(self.board_arr, 0)
         board_str = "\n"
-        board_str += '  ' + "   ".join(str(n) for n in range(NUM_COLS)) + ' \n\n'
+        board_str += '  ' + "   ".join(str(n+1) for n in range(NUM_COLS)) + ' \n\n'
         for row in human_board:
             board_str += '| ' + " | ".join(
                 str(self.players[0].id) if c == self.players[0].id else

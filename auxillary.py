@@ -3,6 +3,7 @@ import os, platform
 
 RED = Fore.RED
 BLUE = Fore.BLUE
+WHITE = Fore.WHITE
 
 def clear_terminal():
     os.system('cls') if platform.system() == "Windows" else os.system('clear')
