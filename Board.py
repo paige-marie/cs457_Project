@@ -1,6 +1,7 @@
 import auxillary as aux
 
 import numpy as np
+import pygame
 
 NUM_COLS, NUM_ROWS = 7, 6
 # NUM_COLS, NUM_ROWS = 3, 3     # change to test draw state (really hard not to accidentally win)
@@ -9,12 +10,78 @@ CIRCLE = '\u25CF'
 
 class Board:
     FILL_VALUE = -1
+    SLOT_SIZE = 100  # Size of each slot
+    PADDING = 10     # Padding between slots
+    BG_COLOR = (0, 0, 255)  # Blue background
+    EMPTY_COLOR = (0, 0, 0)  # Black for empty slots
+    PLAYER_COLORS = [(255, 0, 0), (255, 255, 0)]  # Red, Yellow
 
     def __init__(self, players, in_terminal=True):
         self.board_arr = np.full((NUM_ROWS, NUM_COLS), self.FILL_VALUE, dtype=int)
         self.players = players
         self.winner = -1
         self.in_terminal = in_terminal 
+
+        if not self.in_terminal:
+            self.init_pygame()
+
+    def init_pygame(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode(
+            (NUM_COLS * self.SLOT_SIZE, NUM_ROWS * self.SLOT_SIZE)
+        )
+        pygame.display.set_caption("Connect 4")
+        self.font = pygame.font.SysFont("arial", 24)
+        self.draw_in_pygame(np.flip(self.board_arr, 0))
+
+    def draw_in_pygame(self, human_board):
+        self.screen.fill(self.BG_COLOR)
+        
+        for r in range(NUM_ROWS):
+            for c in range(NUM_COLS):
+                color = (
+                    self.PLAYER_COLORS[0]
+                    if human_board[r][c] == self.players[0].id
+                    else self.PLAYER_COLORS[1]
+                    if human_board[r][c] == self.players[1].id
+                    else self.EMPTY_COLOR
+                )
+                pygame.draw.circle(
+                    self.screen,
+                    color,
+                    (
+                        c * self.SLOT_SIZE + self.SLOT_SIZE // 2,
+                        r * self.SLOT_SIZE + self.SLOT_SIZE // 2,
+                    ),
+                    self.SLOT_SIZE // 2 - self.PADDING,
+                )
+        pygame.display.flip()
+        print('updating borad')
+
+    def update_board(self, move=None, current_player=None):
+
+        if move is not None:
+            if self.place_tile(move, current_player):
+                self.draw_in_pygame(np.flip(self.board_arr, 0))
+                return move
+            else:
+                print(f"Invalid move: {move}")
+                return None
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return None  # Signal to quit the game
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Get the column from the mouse click
+                x, _ = event.pos
+                selected_column = x // self.SLOT_SIZE + 1
+                if self.place_tile(selected_column, current_player):
+                    self.draw_in_pygame(np.flip(self.board_arr, 0))
+                    return selected_column
+                else:
+                    print(f"Invalid move: {selected_column}")
+        return None
+        
 
     def place_tile(self, selected_column: int, playr_num):
         selected_column -= 1
@@ -87,12 +154,19 @@ class Board:
             ) + ' |\n'
         return board_str
     
-    def draw_in_pygame(self, human_board):
-        pass
+    # def draw_in_pygame(self, human_board):
+    #     pass
 
     
 if __name__ == '__main__':
     from Player import Player
     players = [Player('a', 0), Player('b', 1)]
-    b = Board(players)
-    print(b)
+    # b = Board(players)
+    # print(b)
+    b = Board(players, in_terminal=False)
+
+    cur = 0
+    while not b.game_over():
+        b.update_board(move=None, current_player=cur)
+        cur = (cur + 1) % 2
+    
