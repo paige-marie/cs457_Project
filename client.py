@@ -35,7 +35,7 @@ def main():
             players = sorted(players)
             Player.set_player_colors(players)
 
-            board = Board(players)
+            board = Board(players, in_terminal=(not args.gui))
             while(True):
                 try:
                     recv_data = sock.recv(11)
@@ -48,6 +48,9 @@ def main():
                             raise auxillary.CustomError(f"Unexpected message from server: {message}")
                             
                         my_move = take_my_turn(message, board, players)
+                        if my_move is None:
+                            # raise auxillary.CustomError(f"Game was exited")
+                            break
                         message = protocols.make_move(my_move)
                         protocols.send_bytes(protocols.make_json_bytes(message), sock, KEYS['server_pub_key'], True)
 
@@ -75,8 +78,8 @@ def main():
             else: # pretty much only caused by unexpected message from server, like it shuts down
                 print(f"The game was terminated early.")
     
-    except KeyboardInterrupt:
-        print(" Caught keyboard interrupt, exiting")
+    # except KeyboardInterrupt:
+    #     print(" Caught keyboard interrupt, exiting")
     except auxillary.CustomError as e: 
         print(e)
     except Exception as e:
@@ -122,22 +125,34 @@ def get_other_player_info(sock):
     return other_player
 
 def take_my_turn(message, board, players):
+    if message['last_move'] == -1:
+        print('First player')
+    print("its your turn")
     if message['last_move'] != -1: #place the other players tile because this isn't the first move
         col = message['last_move']
+        # if args.gui:
+        #     board.update_board(col, (MY_ID + 1)%2)
+        # else:
         board.place_tile(col, (MY_ID + 1)%2)
+        
+    if args.gui:
+        # board.draw_in_pygame("other player went")
+        col = board.update_board(MY_ID)
+
+    else:
         auxillary.clear_terminal()
-    print(board)
-    while True:
-        try:
-            col = int(input(f'{auxillary.color_text(players[MY_ID], players[MY_ID].name)}, what column? '))
-            valid = board.place_tile(col, MY_ID)
-            if valid:
-                break
-            print("Invalid location")
-        except ValueError:
-            print('input must be a valid column number')
-    auxillary.clear_terminal()
-    print(board)
+        print(board)
+        while True:
+            try:
+                col = int(input(f'{auxillary.color_text(players[MY_ID], players[MY_ID].name)}, what column? '))
+                valid = board.place_tile(col, MY_ID)
+                if valid:
+                    break
+                print("Invalid location")
+            except ValueError:
+                print('input must be a valid column number')
+        auxillary.clear_terminal()
+        print(board)
     return col
 
 def get_instructions():
@@ -164,8 +179,13 @@ if __name__ == '__main__':
                         # metavar='DNS of Server', 
                         required=False,
                         help='Prints the DNS name of the server')
+    parser.add_argument('-g', '--gui',
+                        action='store_true',
+                        default=False, 
+                        required=False,
+                        help='Opt in for GUI board')
     args = parser.parse_args()
-    
+    print(f"gui? {args.gui}")
     main()
 
 # python3 client.py -i harrisburg -p 55668

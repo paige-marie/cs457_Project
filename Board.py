@@ -10,15 +10,20 @@ CIRCLE = '\u25CF'
 
 class Board:
     FILL_VALUE = -1
-    SLOT_SIZE = 100  # Size of each slot
-    PADDING = 10     # Padding between slots
-    BG_COLOR = (0, 0, 255)  # Blue background
-    EMPTY_COLOR = (0, 0, 0)  # Black for empty slots
-    PLAYER_COLORS = [(255, 0, 0), (255, 255, 0)]  # Red, Yellow
+    SLOT_SIZE = 50  # Size of each slot
+    PADDING = 5     # Padding between slots
+    BG_COLOR = (0, 0, 0)  # Black background
+    EMPTY_COLOR = (255, 255, 0)  # Yellow for empty slots
+    PLAYER_COLORS = [(255, 0, 0), (0, 0, 255)]  # Red, Blue
 
     def __init__(self, players, in_terminal=True):
         self.board_arr = np.full((NUM_ROWS, NUM_COLS), self.FILL_VALUE, dtype=int)
         self.players = players
+        for i, ply in enumerate(players):
+            if ply.is_me:
+                self.me = ply
+                self.color = self.PLAYER_COLORS[i]
+
         self.winner = -1
         self.in_terminal = in_terminal 
 
@@ -28,15 +33,22 @@ class Board:
     def init_pygame(self):
         pygame.init()
         self.screen = pygame.display.set_mode(
-            (NUM_COLS * self.SLOT_SIZE, NUM_ROWS * self.SLOT_SIZE)
+            (NUM_COLS * self.SLOT_SIZE, NUM_ROWS * self.SLOT_SIZE + 50 + 60)
         )
-        pygame.display.set_caption("Connect 4")
+        pygame.display.set_caption(f"{self.me.name}'s Connect 4")
         self.font = pygame.font.SysFont("arial", 24)
-        self.draw_in_pygame(np.flip(self.board_arr, 0))
+        self.draw_in_pygame()
+        print('borad init')
 
-    def draw_in_pygame(self, human_board):
+    def draw_in_pygame(self, status=""):
+        human_board = np.flip(self.board_arr, 0)
         self.screen.fill(self.BG_COLOR)
-        
+
+        player_info_text_surface = self.font.render(self.me.name, True, self.color)  # White text
+        self.screen.blit(player_info_text_surface, (10, 10))  # Position at top-left with padding
+
+        text_surface = self.font.render(status, True, (255, 255, 255))  # White text
+        self.screen.blit(text_surface, (10, 60))  # Position at top-left with padding
         for r in range(NUM_ROWS):
             for c in range(NUM_COLS):
                 color = (
@@ -51,36 +63,33 @@ class Board:
                     color,
                     (
                         c * self.SLOT_SIZE + self.SLOT_SIZE // 2,
-                        r * self.SLOT_SIZE + self.SLOT_SIZE // 2,
+                        r * self.SLOT_SIZE + self.SLOT_SIZE // 2 + 50 + 60,
                     ),
                     self.SLOT_SIZE // 2 - self.PADDING,
                 )
         pygame.display.flip()
         print('updating borad')
 
-    def update_board(self, move=None, current_player=None):
+    def update_board(self, current_player=None):
 
-        if move is not None:
-            if self.place_tile(move, current_player):
-                self.draw_in_pygame(np.flip(self.board_arr, 0))
-                return move
-            else:
-                print(f"Invalid move: {move}")
-                return None
+        self.draw_in_pygame("It's your turn!")
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return None  # Signal to quit the game
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                # Get the column from the mouse click
-                x, _ = event.pos
-                selected_column = x // self.SLOT_SIZE + 1
-                if self.place_tile(selected_column, current_player):
-                    self.draw_in_pygame(np.flip(self.board_arr, 0))
-                    return selected_column
-                else:
-                    print(f"Invalid move: {selected_column}")
-        return None
+        while True:  # until a valid event is processed
+            # pygame.event.clear()
+            # event = pygame.event.wait()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return None 
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x, _ = event.pos
+                    selected_column = x // self.SLOT_SIZE + 1
+                    if self.place_tile(selected_column, current_player):
+                        self.draw_in_pygame("waiting for other player...")
+                        # pygame.event.clear()
+                        return selected_column
+                    else:
+                        print(f"Invalid move: {selected_column}")
+            pygame.time.delay(10)
         
 
     def place_tile(self, selected_column: int, playr_num):
@@ -124,10 +133,11 @@ class Board:
 
     def __str__(self):
         human_board = np.flip(self.board_arr, 0)
-        if self.in_terminal:
-            return self.draw_board_in_terminal(human_board)
-        else:
-            return self.draw_in_pygame(human_board)
+        return self.draw_board_in_terminal(human_board)
+        # if self.in_terminal:
+        #     return self.draw_board_in_terminal(human_board)
+        # else:
+        #     return self.draw_in_pygame(human_board)
     
     def draw_board_in_terminal(self, human_board):
         board_str = "\n"
@@ -167,6 +177,6 @@ if __name__ == '__main__':
 
     cur = 0
     while not b.game_over():
-        b.update_board(move=None, current_player=cur)
+        b.update_board(current_player=cur)
         cur = (cur + 1) % 2
     
