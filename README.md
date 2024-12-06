@@ -117,7 +117,8 @@ The server makes the player’s moves on the board, updating the board state and
 
 ## Known Issues
 - Combinations of user disconnect states before the game has started, either before or after the player has been registered, interrupt the assignment of player ids, which affects the downstream action of assigning colors and play order. This is an intermitant issue that is difficult to replicate and isolate. Even now, the bug is believed to be fixed, but may not be. Gameplay proceeds normally, but tile colors are the same (which makes the game impossible for the user to play).
-- **FIXED** When entering a negative number for the selected column to place a tile, move was allowed due to python's negative indexing. Input is now restricted to positive numbers. 
+- **FIXED** When entering a negative number for the selected column to place a tile, move was allowed due to python's negative indexing. Input is now restricted to positive numbers.
+- In terminal mode, if a client inputs a number when it isn't their turn, that input is used on their next turn.
 
 ## Technologies used:
 * Python
