@@ -22,6 +22,7 @@ class Board:
         for i, ply in enumerate(players):
             if ply.is_me:
                 self.me = ply
+                self.my_idx = i
                 self.color = self.PLAYER_COLORS[i]
 
         self.winner = -1
@@ -37,18 +38,18 @@ class Board:
         )
         pygame.display.set_caption(f"{self.me.name}'s Connect 4")
         self.font = pygame.font.SysFont("arial", 24)
+        pygame.event.set_grab(False)
         self.draw_in_pygame()
-        print('borad init')
 
     def draw_in_pygame(self, status=""):
         human_board = np.flip(self.board_arr, 0)
         self.screen.fill(self.BG_COLOR)
 
-        player_info_text_surface = self.font.render(self.me.name, True, self.color)  # White text
+        player_info_text_surface = self.font.render(f"{self.me.name}'s game", True, self.color)  # White text
         self.screen.blit(player_info_text_surface, (10, 10))  # Position at top-left with padding
 
         text_surface = self.font.render(status, True, (255, 255, 255))  # White text
-        self.screen.blit(text_surface, (10, 60))  # Position at top-left with padding
+        self.screen.blit(text_surface, (10, 60))  # Position at top-left with padding under other text box
         for r in range(NUM_ROWS):
             for c in range(NUM_COLS):
                 color = (
@@ -68,29 +69,35 @@ class Board:
                     self.SLOT_SIZE // 2 - self.PADDING,
                 )
         pygame.display.flip()
-        print('updating borad')
 
     def update_board(self, current_player=None):
 
         self.draw_in_pygame("It's your turn!")
-
-        while True:  # until a valid event is processed
-            # pygame.event.clear()
+        pygame.event.clear()
+        while True:  
             # event = pygame.event.wait()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return None 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    x, _ = event.pos
+                    x, y = event.pos
+                    if y < 50 + 60:
+                        continue
                     selected_column = x // self.SLOT_SIZE + 1
                     if self.place_tile(selected_column, current_player):
-                        self.draw_in_pygame("waiting for other player...")
-                        # pygame.event.clear()
+                        self.draw_in_pygame(f"waiting for other player {self.players[(self.my_idx+1)%2].name}...")
                         return selected_column
                     else:
                         print(f"Invalid move: {selected_column}")
             pygame.time.delay(10)
-        
+
+    def update_board_game_over(self, message):
+        self.draw_in_pygame(message)
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or event.type == pygame.MOUSEBUTTONDOWN:
+                    return
+            pygame.time.delay(10)
 
     def place_tile(self, selected_column: int, playr_num):
         selected_column -= 1

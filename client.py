@@ -63,23 +63,12 @@ def main():
                     continue
             
             if game_over:
-                if message['last_move'] == -2: 
-                    print(f"{auxillary.color_text(other_player, other_player.name)} has forfeited.")
-                if message['winner'] != MY_ID: # if I am not the winner, reprint the board with the winning move
-                    col = message['last_move']
-                    board.place_tile(col, (MY_ID + 1)%2)
-                    auxillary.clear_terminal()
-                    print(board)
-                if message['winner'] == -1:
-                    print("There are no more valid moves; the game is a draw")
-                else:
-                    winning_player = Player.get_player_by_id(players, message['winner'])
-                    print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
+                game_over_handling(message, board, players, other_player)
             else: # pretty much only caused by unexpected message from server, like it shuts down
                 print(f"The game was terminated early.")
     
-    # except KeyboardInterrupt:
-    #     print(" Caught keyboard interrupt, exiting")
+    except KeyboardInterrupt:
+        print(" Caught keyboard interrupt, exiting")
     except auxillary.CustomError as e: 
         print(e)
     except Exception as e:
@@ -88,6 +77,30 @@ def main():
     finally:
         sock.close()
         print("Restart to play again")
+
+def game_over_handling(message, board, players, other_player):
+    if message['last_move'] == -2: 
+        if args.gui:
+            board.update_board_game_over(f"{other_player.name} has forfeited.")
+        else:
+            print(f"{auxillary.color_text(other_player, other_player.name)} has forfeited.")
+    if message['winner'] != MY_ID: # if I am not the winner, reprint the board with the winning move
+        col = message['last_move']
+        board.place_tile(col, (MY_ID + 1)%2)
+        if not args.gui:
+            auxillary.clear_terminal()
+            print(board)
+    if message['winner'] == -1:
+        if args.gui:
+            board.update_board_game_over("There are no more valid moves; the game is a draw")
+        else:
+            print("There are no more valid moves; the game is a draw")
+    else:
+        winning_player = Player.get_player_by_id(players, message['winner'])
+        if args.gui:
+            board.update_board_game_over(f"The winner is {winning_player.name}!")
+        else:
+            print(f"The winner is {auxillary.color_text(winning_player, winning_player.name)}!")
 
 
 def setup(sock):
