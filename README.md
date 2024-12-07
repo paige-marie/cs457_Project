@@ -52,7 +52,7 @@ Pygame also has an odd behavior regarding the game loop. Because the clients are
 
 Pygame is incompatable with X11 forwarding to MacOS because of Mac's default openGL version. Using Linux or Windows, if you try to X11 forward two GUIs at once, they will open right on top of each other, causing the one to open first to be blank because it's not in the rendering loop.
 
-The best way to use try the GUI is to use RDP. Either with two RDP sessions or the other player can use SSH to play with the terminal UI. This way, when Pygame gobbles the mouseclicks, it doesn't matter because nothing else besides making that player's move needs to be done in that session. Because this is a tricky setup, screenshots are provided in the folder `/gui-screenshots`.
+The best way to use try the GUI is to use RDP. Either with two RDP sessions or the other player can use SSH to play with the terminal UI. This way, when Pygame gobbles the mouseclicks, it doesn't matter because nothing else besides making that player's move needs to be done in that session. Note that keystrokes are still accepted, so you can always ALT-TAB to the terminal running the client and use CTRL-C to end it. Because this is a tricky setup, screenshots are provided in the folder `/gui-screenshots`.
 
 ## Message Protocol
 Before every message are 11 bytes containting the following information: 
