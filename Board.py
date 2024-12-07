@@ -39,7 +39,7 @@ class Board:
         pygame.display.set_caption(f"{self.me.name}'s Connect 4")
         self.font = pygame.font.SysFont("arial", 24)
         pygame.event.set_grab(False)
-        self.draw_in_pygame()
+        self.draw_in_pygame(f"waiting for other player {self.players[(self.my_idx+1)%2].name}...")
 
     def draw_in_pygame(self, status=""):
         human_board = np.flip(self.board_arr, 0)
@@ -141,10 +141,6 @@ class Board:
     def __str__(self):
         human_board = np.flip(self.board_arr, 0)
         return self.draw_board_in_terminal(human_board)
-        # if self.in_terminal:
-        #     return self.draw_board_in_terminal(human_board)
-        # else:
-        #     return self.draw_in_pygame(human_board)
     
     def draw_board_in_terminal(self, human_board):
         board_str = "\n"
@@ -170,20 +166,3 @@ class Board:
                 for c in row
             ) + ' |\n'
         return board_str
-    
-    # def draw_in_pygame(self, human_board):
-    #     pass
-
-    
-if __name__ == '__main__':
-    from Player import Player
-    players = [Player('a', 0), Player('b', 1)]
-    # b = Board(players)
-    # print(b)
-    b = Board(players, in_terminal=False)
-
-    cur = 0
-    while not b.game_over():
-        b.update_board(current_player=cur)
-        cur = (cur + 1) % 2
-    

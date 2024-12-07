@@ -138,18 +138,11 @@ def get_other_player_info(sock):
     return other_player
 
 def take_my_turn(message, board, players):
-    if message['last_move'] == -1:
-        print('First player')
-    print("its your turn")
     if message['last_move'] != -1: #place the other players tile because this isn't the first move
         col = message['last_move']
-        # if args.gui:
-        #     board.update_board(col, (MY_ID + 1)%2)
-        # else:
         board.place_tile(col, (MY_ID + 1)%2)
         
     if args.gui:
-        # board.draw_in_pygame("other player went")
         col = board.update_board(MY_ID)
 
     else:
@@ -198,7 +191,6 @@ if __name__ == '__main__':
                         required=False,
                         help='Opt in for GUI board')
     args = parser.parse_args()
-    print(f"gui? {args.gui}")
     main()
 
 # python3 client.py -i harrisburg -p 55668
