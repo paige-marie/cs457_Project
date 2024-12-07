@@ -45,6 +45,15 @@ If the signature is found to be invalid, the server will send an error and termi
 ## Security Evaluation
 With the simulated CA and installed certificates, a vulnerability is that only the public key is used to create the signature. There is no identifying information that links that key to the user sending it. This means it is trivial authentication, but it does still offer integrity of the key. The server expects to decrypt every message after the first using the client's public key, so a man in the middle could not pose as that client. However, since the public keys are sent in clear text, all traffic could be decrypted by an observer if they intercepted those initial messages.
 
+## Optional GUI
+The clients support an optional GUI board interface. To enable, the client needs to be passed the `-g` flag when started. The GUI interface uses Pygame. The use of the GUI is completely transparent to the server and the other player. The payer clicks anywhere in the column they'd like to drop their tile. The GUI updates the player about whether it is their turn and who won.
+
+Pygame also has an odd behavior regarding the game loop. Because the clients are completely serial, the sequence must leave the game loop to listen to the socket. When out of the gameloop, Pygame somehow gobbles (and does nothing with) all mouseclicks. This has the effect of the player being unable to click elsewhere (outside of the Pygame window) until it's their turn. This is fixable, but would add complexity (multiple threads) and require a major refactor of the client. We chose not to drastically change the client without sufficient time to test. 
+
+Pygame is incompatable with X11 forwarding to MacOS because of Mac's default openGL version. Using Linux or Windows, if you try to X11 forward two GUIs at once, they will open right on top of each other, causing the one to open first to be blank because it's not in the rendering loop.
+
+The best way to use try the GUI is to use RDP. Either with two RDP sessions or the other player can use SSH to play with the terminal UI. This way, when Pygame gobbles the mouseclicks, it doesn't matter because nothing else besides making that player's move needs to be done in that session. Because this is a tricky setup, screenshots are provided in the folder `/gui-screenshots`.
+
 ## Message Protocol
 Before every message are 11 bytes containting the following information: 
 
