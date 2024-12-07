@@ -15,7 +15,8 @@ This is a simple Connect Four game implemented using Python and sockets.
        - `-h` will print a help dialog
        - `-d` will print the DNS name of the server
        - `-g` use a GUI for gameplay
-       - Exmaple: `python3 server.py -i -p`
+       - Exmaple: `python3 server.py -i -p 55567`
+
 3. **Connect clients:** Run the `client.py` script on two different machines or terminals.
    - Arguments:
        - `-i` to specify the IP address or hostname of the server
@@ -33,11 +34,16 @@ This is a simple Connect Four game implemented using Python and sockets.
 ## Encryption
 Asymetrical RSA encryption with SHA256 hash digests are used for communicating between the client and server. A simulated certificate authority (CA) is implemented. 
 
-The first time the server is started, it instigates the creation of the CA's "certificate", which is only to say it creates public and private keys for the CA. All "certificates" are just the public key. Normally the certificate would include other information beyond the key, like who owns it and duration. This key creation depends on NFS, or some other shared file system, being in use; the clients will use these same keys and will wait for the server to get them created before continuing. These keys are saved to files that are reused for subsequent runs. 
+The first time the server is started, it instigates the creation of the CA's "certificate", which is only to say it creates public and private keys for the CA. All "certificates" are just the public key. Normally the certificate would include other information beyond the key, like who owns it and validity duration. This key creation depends on NFS, or some other shared file system, being in use; the clients will use these same CA key and will wait for the server to get them created before continuing. These keys are saved to files that are reused for subsequent runs. 
 
-Every time the server and client are started, they create new keys for themselves, which they get signed by the simulated CA's private key. Normally, one would undergo rigorous authentication with the CA to have their full certificate signed and would save and reuse it. During their initial communication, the server and client exchange their public keys and the CA's signature. Both verfify the signature is from the CA for that key.
+(Note: there is a small chance of a race condition with the CA key creation. The server should be started and allowed to create the keys before the clients are started)
+
+Every time the server and client are started, they create new keys for themselves, which they get signed by the simulated CA's private key. Normally, one would undergo rigorous authentication with the CA to have their full certificate signed and would save and reuse it. During their initial communication, the server and client exchange their public keys and the CA's signature. Both verfify the signature is from the CA for that key using the CA's public key.
 
 If the signature is found to be invalid, the server will send an error and terminate the connection, then continue waiting for new connections. The client will print a message to the user and terminate the program. 
+
+## Security Evaluation
+With the simulated CA and installed certificates, a vulnerability is that only the public key is used to create the signature. There is no identifying information that links that key to the user sending it. This means it is trivial authentication, but it does still offer integrity of the key. The server expects to decrypt every message after the first using the client's public key, so a man in the middle could not pose as that client. However, since the public keys are sent in clear text, all traffic could be decrypted by an observer if they intercepted those initial messages.
 
 ## Message Protocol
 Before every message are 11 bytes containting the following information: 
@@ -115,6 +121,7 @@ The server makes the player’s moves on the board, updating the board state and
 - Combinations of user disconnect states before the game has started, either before or after the player has been registered, interrupt the assignment of player ids, which affects the downstream action of assigning colors and play order. This is an intermitant issue that is difficult to replicate and isolate. Even now, the bug is believed to be fixed, but may not be. Gameplay proceeds normally, but tile colors are the same (which makes the game impossible for the user to play).
 - **FIXED** When entering a negative number for the selected column to place a tile, move was allowed due to python's negative indexing. Input is now restricted to positive numbers. 
 - When using the GUI, pygame gobbles all mouseclicks when if it not the user's turn. This make it impossible to play both players on the same machine. 
+- In terminal mode, if a client inputs a number when it isn't their turn, that input is used on their next turn.
 
 ## Technologies used:
 * Python
