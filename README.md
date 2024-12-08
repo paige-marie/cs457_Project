@@ -144,6 +144,22 @@ The server makes the player’s moves on the board, updating the board state and
 * [Converting rsa object for json serialization](https://stuvel.eu/python-rsa-doc/reference.html#functions)
 * [Pygame docs](https://www.pygame.org/docs/)
 
-## Sprint 1 Behavior:
-Two clients can connect to the server and specify their name once their connection is accepted. The server sends back each client their player id.
+## Future Plans
+There are two main thrusts for future work on this game. A user defined dynamic board and multiple games running at once in the server.
+
+### Multiple games
+The server was designed with supporting multiple games in mind. It is why the game state is separate from the server state. As soon as the server detects that there are 2 players waiting, it starts a game. Currently, if additional clients try to connect, the server notifies them that the game is full and terminates that connection. To support multiple simultaneous games, the server would not do this but instead start yet another game. This would require a method of looking up, by the player’s information stored with the socket, which game they are associated with. It would also need a way to store each game state separately, such as a game class. 
+
+### Dynamic Board
+Connect four is traditionally a 6x7 board where 4 in a row wins. Theses game parameters are easily changed, and the board class is written is such a way that they could be changed at instantiation time. This would require some rule about which player gets to select the board state, as well as some restrictions on the relationship between numbers chosen. For example, if you need 4 in a row to win, choosing a 3x3 board does not make sense and should be denied. Additionally, more than 2 players could be allowed to play on the same board, and they could pick their own color. 
+
+
+## Retrospective
+### What went right
+- Using the TCP sockets asynchronously in the server using the select mechanism was an interesting and new perspective for asynchronous Python. 
+- Updating and using server state in a way that produced predictable behavior in the face of different possible client actions was also an interesting challenge which we enjoyed.
+
+### What could be improved on
+- The biggest difficulty was introducing Pygame. The GUI has some undesirable behavior, but because of breadth of changes required to make it behave how we wanted, we chose not to potentially introduce bugs without enough time to test. The easiest way this could have been addressed is by making the client multithreaded when the GUI option was used. 
+- Another difficulty was encryption. The key objects were an uncommon format that could not be serialized using the json library. Working with these, both serializing and deserializing them, was a unique challenge.
 
