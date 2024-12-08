@@ -14,7 +14,9 @@ This is a simple Connect Four game implemented using Python and sockets.
        - `-p` to specify the port number the server is listening on. If ommited, a default port is  used
        - `-h` will print a help dialog
        - `-d` will print the DNS name of the server
+       - `-g` use a GUI for gameplay
        - Exmaple: `python3 server.py -i -p 55567`
+
 3. **Connect clients:** Run the `client.py` script on two different machines or terminals.
    - Arguments:
        - `-i` to specify the IP address or hostname of the server
@@ -42,6 +44,15 @@ If the signature is found to be invalid, the server will send an error and termi
 
 ## Security Evaluation
 With the simulated CA and installed certificates, a vulnerability is that only the public key is used to create the signature. There is no identifying information that links that key to the user sending it. This means it is trivial authentication, but it does still offer integrity of the key. The server expects to decrypt every message after the first using the client's public key, so a man in the middle could not pose as that client. However, since the public keys are sent in clear text, all traffic could be decrypted by an observer if they intercepted those initial messages.
+
+## Optional GUI
+The clients support an optional GUI board interface. To enable, the client needs to be passed the `-g` flag when started. The GUI interface uses Pygame. The use of the GUI is completely transparent to the server and the other player. The payer clicks anywhere in the column they'd like to drop their tile. The GUI updates the player about whether it is their turn and who won.
+
+Pygame also has an odd behavior regarding the game loop. Because the clients are completely serial, the sequence must leave the game loop to listen to the socket. When out of the gameloop, Pygame somehow gobbles (and does nothing with) all mouseclicks. This has the effect of the player being unable to click elsewhere (outside of the Pygame window) until it's their turn. This is fixable, but would add complexity (multiple threads) and require a major refactor of the client. We chose not to drastically change the client without sufficient time to test. 
+
+Pygame is incompatable with X11 forwarding to MacOS because of Mac's default openGL version. Using Linux or Windows, if you try to X11 forward two GUIs at once, they will open right on top of each other, causing the one to open first to be blank because it's not in the rendering loop.
+
+The best way to use try the GUI is to use RDP. Either with two RDP sessions or the other player can use SSH to play with the terminal UI. This way, when Pygame gobbles the mouseclicks, it doesn't matter because nothing else besides making that player's move needs to be done in that session. Note that keystrokes are still accepted, so you can always ALT-TAB to the terminal running the client and use CTRL-C to end it. Because this is a tricky setup, screenshots are provided in the folder `/gui-screenshots`.
 
 ## Message Protocol
 Before every message are 11 bytes containting the following information: 
@@ -117,18 +128,21 @@ The server makes the player’s moves on the board, updating the board state and
 
 ## Known Issues
 - Combinations of user disconnect states before the game has started, either before or after the player has been registered, interrupt the assignment of player ids, which affects the downstream action of assigning colors and play order. This is an intermitant issue that is difficult to replicate and isolate. Even now, the bug is believed to be fixed, but may not be. Gameplay proceeds normally, but tile colors are the same (which makes the game impossible for the user to play).
-- **FIXED** When entering a negative number for the selected column to place a tile, move was allowed due to python's negative indexing. Input is now restricted to positive numbers.
+- **FIXED** When entering a negative number for the selected column to place a tile, move was allowed due to python's negative indexing. Input is now restricted to positive numbers. 
+- When using the GUI, pygame gobbles all mouseclicks when if it not the user's turn. This make it impossible to play both players on the same machine. 
 - In terminal mode, if a client inputs a number when it isn't their turn, that input is used on their next turn.
 
 ## Technologies used:
 * Python
 * Sockets
 * RSA Encryption
+* Pygame
 
 ## Additional resources
 * [Connect Four Rules](https://en.wikipedia.org/wiki/Connect_Four)
 * [Encryption tutorial](https://www.geeksforgeeks.org/how-to-encrypt-and-decrypt-strings-in-python/)
 * [Converting rsa object for json serialization](https://stuvel.eu/python-rsa-doc/reference.html#functions)
+* [Pygame docs](https://www.pygame.org/docs/)
 
 ## Sprint 1 Behavior:
 Two clients can connect to the server and specify their name once their connection is accepted. The server sends back each client their player id.
